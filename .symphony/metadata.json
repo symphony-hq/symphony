@@ -1,0 +1,39 @@
+[
+  {
+    "name": "search",
+    "description": "Lists search results for a person.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The email of the person to search."
+        }
+      },
+      "required": [
+        "email"
+      ]
+    }
+  },
+  {
+    "name": "weather",
+    "description": "Gets temperature of a city.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "string",
+          "description": "Latitude of the city."
+        },
+        "lon": {
+          "type": "string",
+          "description": "Longitude of the city."
+        }
+      },
+      "required": [
+        "lat",
+        "lon"
+      ]
+    }
+  }
+]
