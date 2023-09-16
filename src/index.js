@@ -40,7 +40,7 @@ const App = () => {
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:8080");
 
-    socket.addEventListener("open", (event) => {
+    socket.addEventListener("open", () => {
       console.log("Connected to Symphony Websocket Server");
       setIsConnected(true);
     });
@@ -74,9 +74,12 @@ const App = () => {
   return (
     <div className="page">
       <div className="navigation">
-        <div className="menu"></div>
         <div className="name">Symphony Studio</div>
-        <div className={cx("status", { connected: isConnected })}></div>
+        <div className={cx("status", { connected: isConnected })}>
+          <div className="tooltip">
+            {isConnected ? "Connected" : "Disconnected"}
+          </div>
+        </div>
       </div>
 
       <div className="conversation">

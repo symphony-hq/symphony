@@ -49,9 +49,30 @@ body {
       background: $red;
       border-radius: 50%;
       transition: background 0.2s ease-in-out;
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
 
       &.connected {
         background: $green;
+      }
+
+      .tooltip {
+        display: none;
+        position: absolute;
+        font-size: ms(-1);
+        background: $neutral-800;
+        right: ms(2);
+        padding: ms(-6) ms(-4);
+        color: $neutral-50;
+        border-radius: ms(-6);
+      }
+
+      &:hover {
+        .tooltip {
+          display: block;
+        }
       }
     }
   }
