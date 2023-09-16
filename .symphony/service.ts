@@ -88,6 +88,7 @@ const machine = createMachine(
             {
               target: "gpt4",
               cond: (_, event) => event.data,
+              actions: ["sendFunctionMessageToClients"],
             },
             {
               target: "idle",
@@ -106,7 +107,7 @@ const machine = createMachine(
           onDone: {
             target: "function",
             actions: [
-              "sendMessageToClients",
+              "sendAssistantMessageToClients",
               assign({
                 messages: (context, event) => {
                   const { messages } = context;
@@ -138,8 +139,15 @@ const machine = createMachine(
   },
   {
     actions: {
-      sendMessageToClients: (_, event) => {
+      sendAssistantMessageToClients: (_, event) => {
         const { message } = event.data.choices[0];
+
+        wss.clients.forEach((client) => {
+          client.send(JSON.stringify(message));
+        });
+      },
+      sendFunctionMessageToClients: (_, event) => {
+        const { data: message } = event;
 
         wss.clients.forEach((client) => {
           client.send(JSON.stringify(message));
@@ -165,4 +173,4 @@ wss.on("connection", (connection) => {
   });
 });
 
-server.listen(3000);
+server.listen(8080);

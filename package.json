@@ -1,20 +1,46 @@
 {
+  "name": "symphony",
+  "version": "1.0.0",
   "scripts": {
     "inspect": "nodemon --watch functions --exec ts-node .symphony/inspect.ts",
-    "dev": "nodemon --watch functions --exec ts-node .symphony/service.ts"
+    "dev": "nodemon --watch functions --exec ts-node .symphony/service.ts",
+    "studio": "react-scripts start"
   },
   "dependencies": {
     "@types/node": "^20.6.0",
     "axios": "^1.5.0",
+    "classnames": "^2.3.2",
     "dotenv": "^16.3.1",
     "fp-ts": "^2.16.1",
     "openai": "^4.6.0",
     "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "sass": "^1.67.0",
     "ws": "^8.14.1",
     "xstate": "^4.38.2"
   },
   "devDependencies": {
+    "modularscale-sass": "^3.0.10",
     "nodemon": "^3.0.1",
     "typescript": "^5.2.2"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

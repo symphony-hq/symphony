@@ -1,5 +1,4 @@
 import axios from "axios";
-import React from "react";
 
 /**
  * @property {string} lat Latitude of the city.
@@ -37,6 +36,6 @@ export default async function handler(
 
   return {
     temperature: result.main.temp,
-    unit: "Celsius",
+    unit: "Kelvin",
   };
 }
