@@ -101,6 +101,8 @@ body {
           font-family: "DM Mono", monospace;
           font-size: ms(-1);
           color: $neutral-500;
+          width: calc(100vw - #{ms(0) * 2});
+          overflow-x: scroll;
         }
       }
     }

@@ -14,7 +14,10 @@
           "description": "Longitude of the city."
         }
       },
-      "required": ["lat", "lon"]
+      "required": [
+        "lat",
+        "lon"
+      ]
     }
   },
   {
@@ -28,7 +31,9 @@
           "description": "Number in Kelvin."
         }
       },
-      "required": ["number"]
+      "required": [
+        "number"
+      ]
     }
   }
 ]
