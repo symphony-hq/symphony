@@ -2,7 +2,7 @@ import { Server } from "ws";
 import { createServer } from "http";
 import { createMachine, interpret, EventObject, assign } from "xstate";
 import OpenAI from "openai";
-import * as functions from "./metadata.json";
+import * as functionDescriptions from "./descriptions.json";
 import { pipe } from "fp-ts/lib/function";
 import * as RAR from "fp-ts/ReadonlyArray";
 import * as O from "fp-ts/Option";
@@ -102,7 +102,7 @@ const machine = createMachine(
             openai.chat.completions.create({
               messages: [...context.messages, event.data],
               model: "gpt-4",
-              functions,
+              functions: functionDescriptions,
             }),
           onDone: {
             target: "function",

@@ -43,6 +43,11 @@ body {
     padding: ms(0);
     background: $neutral-50;
 
+    .name {
+      font-size: ms(-1);
+      color: $neutral-500;
+    }
+
     .status {
       width: ms(-2);
       height: ms(-2);
@@ -81,7 +86,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    height: calc(100vh - 53px - 75.47px - #{ms(0)});
+    height: calc(100vh - 48.5px - 75.47px - #{ms(0)});
     padding-top: ms(0);
     padding-left: ms(0);
     padding-right: ms(0);

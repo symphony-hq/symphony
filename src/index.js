@@ -41,7 +41,7 @@ const App = () => {
     const socket = new WebSocket("ws://localhost:8080");
 
     socket.addEventListener("open", () => {
-      console.log("Connected to Symphony Websocket Server");
+      console.log("Connected to Symphony Service");
       setIsConnected(true);
     });
 
@@ -51,7 +51,7 @@ const App = () => {
     });
 
     socket.addEventListener("close", (event) => {
-      console.log("Server connection closed ", event.code);
+      console.log("Service connection closed ", event.code);
       setIsConnected(false);
     });
 
@@ -74,7 +74,7 @@ const App = () => {
   return (
     <div className="page">
       <div className="navigation">
-        <div className="name">Symphony Studio</div>
+        <div className="name">Symphony</div>
         <div className={cx("status", { connected: isConnected })}>
           <div className="tooltip">
             {isConnected ? "Connected" : "Disconnected"}

@@ -1,4 +1,4 @@
-![symphony](https://github.com/symphony-hq/symphony/assets/17938322/1309a023-405e-4045-91ef-2177c6c77bb3)
+![symphony copy](https://github.com/symphony-hq/symphony/assets/17938322/b147e627-77ac-4e73-b951-e251a9b16745)
 
 ## About
 Symphony is a toolkit that makes functions invokable by GPT4.
