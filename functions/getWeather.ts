@@ -1,12 +1,12 @@
 import axios from "axios";
 
 /**
- * @property {string} lat Latitude of the city.
- * @property {string} lon Longitude of the city.
+ * @property {number} lat Latitude of the city.
+ * @property {number} lon Longitude of the city.
  */
 interface SymphonyRequest {
-  lat: string;
-  lon: string;
+  lat: number;
+  lon: number;
 }
 
 /**
