@@ -4,7 +4,7 @@ import json
 
 
 class SymphonyRequest(TypedDict):
-    address: str
+    address: str  # The IP address to get the coordinates of. Defaults to 'me'.
 
 
 class SymphonyResponse(TypedDict):
@@ -13,6 +13,9 @@ class SymphonyResponse(TypedDict):
 
 
 def handler(request: SymphonyRequest) -> SymphonyResponse:
+    """
+    Returns the latitude and longitude of the given IP address.
+    """
     address = request["address"]
 
     g = geocoder.ip(address)

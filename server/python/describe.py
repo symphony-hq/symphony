@@ -2,6 +2,11 @@ import ast
 import os
 import json
 
+OPENAI_TYPES = {
+    'str': 'string',
+    'int': 'integer',
+}
+
 
 def extract_function_signature_from_file(file_path):
     with open(file_path, 'r') as source:
@@ -11,9 +16,11 @@ def extract_function_signature_from_file(file_path):
 
         classes = {cls.name: cls for cls in node.body if isinstance(
             cls, ast.ClassDef)}
+        functions = [f for f in node.body if isinstance(f, ast.FunctionDef)]
 
         properties = {}
         required = []
+        function_descriptions = {}
 
         for _, class_node in classes.items():
             if class_node.name == 'SymphonyRequest':
@@ -30,14 +37,20 @@ def extract_function_signature_from_file(file_path):
                             else:
                                 required.append(property_name)
 
+                            property_description = n.value.s if isinstance(
+                                n.value, ast.Str) else 'No description provided'
+
                             properties[property_name] = {
-                                'type': property_type,
-                                'description': 'x'
+                                'type': OPENAI_TYPES[property_type],
+                                'description': property_description
                             }
+
+        for function in functions:
+            function_descriptions[function.name] = ast.get_docstring(function)
 
         return {
             'name': name,
-            'description': '',
+            'description': function_descriptions['handler'],
             'parameters': {
                 'type': 'object',
                 'properties': properties
