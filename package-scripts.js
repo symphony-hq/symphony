@@ -15,7 +15,7 @@ requiredEnvVariables.forEach((variable) => {
 });
 module.exports = {
   scripts: {
-    describe: "nodemon --watch functions --exec ts-node server/describe.ts",
+    describe: "nodemon --watch functions --exec yarn ts-node server/describe.ts",
     service: "ts-node server/service.ts",
     studio: "react-scripts start",
     start: npsUtils.concurrent.nps("describe", "service", "studio"),

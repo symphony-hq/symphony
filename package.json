@@ -21,6 +21,7 @@
     "xstate": "^4.38.2"
   },
   "devDependencies": {
+    "ts-node": "^10.9.1",
     "modularscale-sass": "^3.0.10",
     "nodemon": "^3.0.1",
     "typescript": "^5.2.2"
