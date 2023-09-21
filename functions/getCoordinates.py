@@ -2,25 +2,26 @@ from typing import Optional, TypedDict
 import geocoder
 import json
 import sys
-from pydantic import BaseModel
+from pydantic import Field, BaseModel
 
 
 class SymphonyRequest(BaseModel):
-    address: str  # The IP address to get the coordinates of. Defaults to 'me'.
+    ipAddress: str = Field(
+        description="The IP address; Use 'me' to get own IP address")
 
 
 class SymphonyResponse(BaseModel):
-    lat: float
-    lng: float
+    lat: float = Field(description="The latitude of IP address")
+    lng: float = Field(description="The longitude of IP address")
 
 
 def handler(request: SymphonyRequest) -> SymphonyResponse:
     """
-    Returns the latitude and longitude of the given IP address.
+    Get latitude and longitude from IP address
     """
-    address = request.address
+    ipAddress = request.ipAddress
 
-    g = geocoder.ip(address)
+    g = geocoder.ip(ipAddress)
     lat, lng = g.latlng
 
     return SymphonyResponse(lat=lat, lng=lng)

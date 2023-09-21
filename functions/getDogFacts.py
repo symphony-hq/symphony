@@ -1,20 +1,20 @@
 import requests
 import json
 import sys
-from pydantic import BaseModel
+from pydantic import Field, BaseModel
 
 
 class SymphonyRequest(BaseModel):
-    pass  # No input required for this function
+    pass
 
 
 class SymphonyResponse(BaseModel):
-    facts: list  # The list of dog facts
+    facts: list = Field(description="A list of dog facts")
 
 
 def handler(request: SymphonyRequest) -> SymphonyResponse:
     """
-    Fetches dog facts from an API.
+    Get dog facts
     """
     response = requests.get('https://dog-api.kinduff.com/api/facts')
     data = response.json()

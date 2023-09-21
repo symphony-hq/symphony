@@ -1,16 +1,19 @@
 from typing import List
-from pydantic import BaseModel
+from pydantic import Field, BaseModel
 import json
 import sys
 
 
 class SymphonyRequest(BaseModel):
-    matrix1: List[List[float]]  # The first matrix to be multiplied.
-    matrix2: List[List[float]]  # The second matrix to be multiplied.
+    matrix1: List[List[float]
+                  ] = Field(description="The first matrix to be multiplied")
+    matrix2: List[List[float]] = Field(
+        description="The second matrix to be multiplied")
 
 
 class SymphonyResponse(BaseModel):
-    result: List[List[float]]  # The result of the matrix multiplication.
+    result: List[List[float]] = Field(
+        description="The result of the matrix multiplication")
 
 
 def handler(request: SymphonyRequest) -> SymphonyResponse:
