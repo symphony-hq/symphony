@@ -3,56 +3,26 @@ import * as fs from "fs";
 
 const FUNCTIONS_DIRECTORY = "./functions";
 
-interface Metadata {
+interface Schema {
   name: string;
   description: string;
   parameters: any;
 }
 
-function generateMetadata(sourceFile: ts.SourceFile, fileName: string) {
-  let metadata: Metadata = {
-    name: "",
-    description: "",
-    parameters: {},
-  };
-
-  ts.forEachChild(sourceFile, (node) => {
-    const symphonyTypes = ["SymphonyRequest"];
-
-    if (
-      ts.isInterfaceDeclaration(node) &&
-      symphonyTypes.includes(node.name.text)
-    ) {
-      metadata.parameters = extractProperties(node);
-    }
-
-    if (ts.isFunctionDeclaration(node)) {
-      const jsDocComments = ts.getJSDocCommentsAndTags(node);
-
-      let jsDocComment = "";
-
-      for (const comment of jsDocComments) {
-        const commentText = comment.getFullText();
-        const propertyCommentMatch = new RegExp(`@description (.*)`).exec(
-          commentText
-        );
-
-        if (propertyCommentMatch && propertyCommentMatch[1]) {
-          jsDocComment = propertyCommentMatch[1].trim();
-          break;
-        }
-      }
-
-      metadata.description = jsDocComment;
-    }
-  });
-
-  metadata.name = fileName.replace(".", "-");
-  return metadata;
+function getSchema(propertyType) {
+  if (propertyType === "string") {
+    return { type: "string" };
+  } else if (propertyType === "number") {
+    return { type: "number" };
+  } else if (propertyType === "boolean") {
+    return { type: "boolean" };
+  } else if (propertyType.includes("[]")) {
+    return { type: "array", items: { type: propertyType.replace("[]", "") } };
+  }
 }
 
-function extractProperties(node: ts.InterfaceDeclaration) {
-  let properties: any = {
+function extractParameters(node: ts.InterfaceDeclaration) {
+  let parameters: any = {
     type: "object",
     properties: {},
     required: [],
@@ -62,34 +32,62 @@ function extractProperties(node: ts.InterfaceDeclaration) {
 
   for (const member of node.members) {
     if (ts.isPropertySignature(member)) {
-      const propertyName = member.name.getText();
-      const propertyType = member.type!.getText();
+      const name = member.name.getText();
+      const type = member.type.getText();
 
-      let jsDocComment = "";
-      for (const comment of jsDocComments) {
-        const commentText = comment.getFullText();
-        const propertyCommentMatch = new RegExp(
-          `@property {${propertyType}} ${propertyName} (.*)`
-        ).exec(commentText);
-
-        if (propertyCommentMatch && propertyCommentMatch[1]) {
-          jsDocComment = propertyCommentMatch[1].trim();
-          break;
-        }
-      }
-
-      properties.properties[propertyName] = {
-        type: propertyType,
-        description: jsDocComment || "",
-      };
+      parameters.properties[name] = getSchema(type);
 
       if (!member.questionToken) {
-        properties.required.push(propertyName);
+        parameters.required.push(name);
+      }
+
+      for (const comment of jsDocComments) {
+        const commentText = comment.getFullText();
+        const propertyCommentMatch = new RegExp(`${name}: (.*)`).exec(
+          commentText
+        );
+
+        if (propertyCommentMatch && propertyCommentMatch[1]) {
+          parameters.properties[name]["description"] =
+            propertyCommentMatch[1].trim();
+        }
       }
     }
   }
 
-  return properties;
+  return parameters;
+}
+
+function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
+  let schema: Schema = {
+    name: "",
+    description: "",
+    parameters: {},
+  };
+
+  ts.forEachChild(sourceFile, (node) => {
+    if (ts.isInterfaceDeclaration(node)) {
+      if (node.name.text === "SymphonyRequest") {
+        schema.parameters = extractParameters(node);
+      }
+    }
+
+    if (ts.isFunctionDeclaration(node)) {
+      const jsDocComments = ts.getJSDocCommentsAndTags(node);
+
+      for (const comment of jsDocComments) {
+        const commentText = comment.getFullText();
+        const propertyCommentMatch = new RegExp(/\* (.*)/).exec(commentText);
+
+        if (propertyCommentMatch && propertyCommentMatch[1]) {
+          schema.description = propertyCommentMatch[1].trim();
+        }
+      }
+    }
+  });
+
+  schema.name = fileName.replace(".", "-");
+  return schema;
 }
 
 const readFiles = new Promise((resolve, reject) => {
@@ -103,18 +101,19 @@ const readFiles = new Promise((resolve, reject) => {
     files
       .filter((fileName) => fileName.endsWith(".ts"))
       .forEach((fileName) => {
-        const code = fs.readFileSync(
+        const content = fs.readFileSync(
           `${FUNCTIONS_DIRECTORY}/${fileName}`,
           "utf8"
         );
+
         const sourceFile = ts.createSourceFile(
           "temp.ts",
-          code,
+          content,
           ts.ScriptTarget.Latest,
           true
         );
 
-        const metadata = generateMetadata(sourceFile, fileName);
+        const metadata = generateSchema(sourceFile, fileName);
         metadatas.push(metadata);
       });
 

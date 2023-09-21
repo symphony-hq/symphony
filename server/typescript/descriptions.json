@@ -1,17 +1,17 @@
 [
   {
     "name": "getWeather-ts",
-    "description": "Gets temperature of a city.",
+    "description": "Gets temperature of a city",
     "parameters": {
       "type": "object",
       "properties": {
         "lat": {
           "type": "number",
-          "description": "Latitude of the city."
+          "description": "Latitude of the city"
         },
         "lon": {
           "type": "number",
-          "description": "Longitude of the city."
+          "description": "Longitude of the city"
         }
       },
       "required": [
@@ -22,17 +22,17 @@
   },
   {
     "name": "kelvinToCelsius-ts",
-    "description": "Converts Kelvin to Celsius.",
+    "description": "Converts Kelvin to Celsius",
     "parameters": {
       "type": "object",
       "properties": {
-        "number": {
+        "value": {
           "type": "number",
-          "description": "Number in Kelvin."
+          "description": "Value in Kelvin"
         }
       },
       "required": [
-        "number"
+        "value"
       ]
     }
   }

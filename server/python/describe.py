@@ -21,17 +21,16 @@ def generate_function_description(name, function: Callable[..., Any], request_mo
     response_schema = response_model.model_json_schema()
 
     remove_title(request_schema)
-    remove_title(response_schema)
+    # remove_title(response_schema)
 
-    # Reorder the fields so that 'type' comes first
     request_schema = {'type': request_schema['type'], **request_schema}
-    response_schema = {'type': response_schema['type'], **response_schema}
+    # response_schema = {'type': response_schema['type'], **response_schema}
 
     function_description = {
         "name": name,
         "description": function.__doc__.strip(),
         "parameters": request_schema,
-        "returns": response_schema,
+        # "returns": response_schema,
     }
 
     return function_description

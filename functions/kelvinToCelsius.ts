@@ -1,26 +1,26 @@
 /**
- * @property {number} number Number in Kelvin.
+ * value: Value in Kelvin
  */
 interface SymphonyRequest {
-  number: number;
+  value: number;
 }
 
 /**
- * @property {number} temperature Number in Celsius.
+ * temperature: Value in Celsius
  */
 interface SymphonyResponse {
-  number: number;
+  value: number;
 }
 
 /**
- * @description Converts Kelvin to Celsius.
+ * Converts Kelvin to Celsius
  */
 export default async function handler(
   request: SymphonyRequest
 ): Promise<SymphonyResponse> {
-  const { number } = request;
+  const { value } = request;
 
   return {
-    number: Math.round(number - 273.15),
+    value: Math.round(value - 273.15),
   };
 }

@@ -30,24 +30,6 @@
                 "matrix1",
                 "matrix2"
             ]
-        },
-        "returns": {
-            "type": "object",
-            "properties": {
-                "result": {
-                    "description": "The result of the matrix multiplication",
-                    "items": {
-                        "items": {
-                            "type": "number"
-                        },
-                        "type": "array"
-                    },
-                    "type": "array"
-                }
-            },
-            "required": [
-                "result"
-            ]
         }
     },
     {
@@ -56,19 +38,6 @@
         "parameters": {
             "type": "object",
             "properties": {}
-        },
-        "returns": {
-            "type": "object",
-            "properties": {
-                "facts": {
-                    "description": "A list of dog facts",
-                    "items": {},
-                    "type": "array"
-                }
-            },
-            "required": [
-                "facts"
-            ]
         }
     },
     {
@@ -84,23 +53,6 @@
             },
             "required": [
                 "ipAddress"
-            ]
-        },
-        "returns": {
-            "type": "object",
-            "properties": {
-                "lat": {
-                    "description": "The latitude of IP address",
-                    "type": "number"
-                },
-                "lng": {
-                    "description": "The longitude of IP address",
-                    "type": "number"
-                }
-            },
-            "required": [
-                "lat",
-                "lng"
             ]
         }
     }
