@@ -1,6 +1,18 @@
 @import "~modularscale-sass/stylesheets/modularscale";
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz@9..40&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=DM+Mono&display=swap");
+
+@font-face {
+  font-family: "apercu";
+  src: url("../public/fonts/apercu-regular.woff2") format("woff2");
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "apercu mono";
+  src: url("../public/fonts/apercu-mono.woff2") format("woff2");
+  font-style: normal;
+  font-display: swap;
+}
 
 $red: #eb5528;
 $orange: #ed7e30;
@@ -26,7 +38,7 @@ body {
 }
 
 * {
-  font-family: "DM Sans", sans-serif;
+  font-family: "apercu", sans-serif;
 }
 
 .page {
@@ -106,7 +118,7 @@ body {
           flex-shrink: 0;
           height: 21px;
           width: 21px;
-          background: $neutral-900;
+          background: $neutral-300;
           border-radius: ms(-8);
 
           &.user {
@@ -124,7 +136,7 @@ body {
 
         .json {
           margin: 0;
-          font-family: "DM Mono", monospace;
+          font-family: "apercu mono", monospace;
           font-size: ms(-1);
           color: $neutral-500;
           width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
