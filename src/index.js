@@ -23,7 +23,10 @@ const Message = ({ message }) => {
         </div>
       ) : message.role === "function" ? (
         <div className="function">
-          <div className="name">{`Output of ${message.name}`}</div>
+          <div className="name">{`Output of ${message.name.replace(
+            "-",
+            "."
+          )}`}</div>
           <pre className="json">
             {JSON.stringify(JSON.parse(message.content), null, 2)}
           </pre>
