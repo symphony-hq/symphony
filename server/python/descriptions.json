@@ -11,7 +11,6 @@
             "properties": {
                 "facts": {
                     "items": {},
-                    "title": "Facts",
                     "type": "array"
                 }
             },
@@ -33,7 +32,6 @@
                         },
                         "type": "array"
                     },
-                    "title": "Matrix1",
                     "type": "array"
                 },
                 "matrix2": {
@@ -43,7 +41,6 @@
                         },
                         "type": "array"
                     },
-                    "title": "Matrix2",
                     "type": "array"
                 }
             },
@@ -62,7 +59,6 @@
                         },
                         "type": "array"
                     },
-                    "title": "Result",
                     "type": "array"
                 }
             },
@@ -78,7 +74,6 @@
             "type": "object",
             "properties": {
                 "address": {
-                    "title": "Address",
                     "type": "string"
                 }
             },
@@ -90,11 +85,9 @@
             "type": "object",
             "properties": {
                 "lat": {
-                    "title": "Lat",
                     "type": "number"
                 },
                 "lng": {
-                    "title": "Lng",
                     "type": "number"
                 }
             },

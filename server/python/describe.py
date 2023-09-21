@@ -7,13 +7,21 @@ import sys
 sys.path.insert(0, os.path.abspath('functions'))
 
 
+def remove_title(schema):
+    if 'title' in schema:
+        schema.pop('title')
+
+    for value in schema.values():
+        if isinstance(value, dict):
+            remove_title(value)
+
+
 def generate_function_description(name, function: Callable[..., Any], request_model: Type[BaseModel], response_model: Type[BaseModel]) -> dict:
     request_schema = request_model.model_json_schema()
     response_schema = response_model.model_json_schema()
 
-    # Remove the title field
-    request_schema.pop('title', None)
-    response_schema.pop('title', None)
+    remove_title(request_schema)
+    remove_title(response_schema)
 
     # Reorder the fields so that 'type' comes first
     request_schema = {'type': request_schema['type'], **request_schema}
