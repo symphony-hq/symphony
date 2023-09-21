@@ -16,6 +16,10 @@ requiredEnvVariables.forEach((variable) => {
 
 module.exports = {
   scripts: {
+    initialize: {
+      py: "virtualenv -p python3 venv && source venv/bin/activate && pip install -r requirements.txt",
+      default: "yarn nps initialize.py",
+    },
     describe: {
       ts: "nodemon --watch functions --exec yarn ts-node server/typescript/describe.ts",
       py: "nodemon --watch functions --exec python3 server/python/describe.py",
@@ -24,6 +28,11 @@ module.exports = {
     service: "ts-node server/service.ts",
     studio: "react-scripts start",
     start: npsUtils.concurrent.nps("describe.all", "service", "studio"),
-    clean: "yarn rimraf node_modules",
+    clean: {
+      ts: "yarn rimraf node_modules",
+      py: "yarn rimraf venv",
+      all: npsUtils.concurrent.nps("clean.ts", "clean.py"),
+      default: "yarn nps clean.all",
+    },
   },
 };
