@@ -1,18 +1,107 @@
 [
     {
+        "name": "getDogFacts-py",
+        "description": "\n    Fetches dog facts from an API.\n    ",
+        "parameters": {
+            "type": "object",
+            "properties": {}
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "facts": {
+                    "items": {},
+                    "title": "Facts",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "facts"
+            ]
+        }
+    },
+    {
+        "name": "getMatrixMul-py",
+        "description": "\n    Multiplies two matrices.\n    ",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "matrix1": {
+                    "items": {
+                        "items": {
+                            "type": "number"
+                        },
+                        "type": "array"
+                    },
+                    "title": "Matrix1",
+                    "type": "array"
+                },
+                "matrix2": {
+                    "items": {
+                        "items": {
+                            "type": "number"
+                        },
+                        "type": "array"
+                    },
+                    "title": "Matrix2",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "matrix1",
+                "matrix2"
+            ]
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "result": {
+                    "items": {
+                        "items": {
+                            "type": "number"
+                        },
+                        "type": "array"
+                    },
+                    "title": "Result",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "result"
+            ]
+        }
+    },
+    {
         "name": "getCoordinates-py",
-        "description": "Returns the latitude and longitude of the given IP address.",
+        "description": "\n    Returns the latitude and longitude of the given IP address.\n    ",
         "parameters": {
             "type": "object",
             "properties": {
                 "address": {
-                    "type": "string",
-                    "description": "No description provided"
+                    "title": "Address",
+                    "type": "string"
                 }
-            }
+            },
+            "required": [
+                "address"
+            ]
         },
-        "required": [
-            "address"
-        ]
+        "returns": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "title": "Lat",
+                    "type": "number"
+                },
+                "lng": {
+                    "title": "Lng",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "lat",
+                "lng"
+            ]
+        }
     }
 ]
