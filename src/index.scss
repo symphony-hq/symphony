@@ -110,7 +110,7 @@ body {
           border-radius: ms(-8);
 
           &.user {
-            background: $orange;
+            background: $red;
           }
         }
 
@@ -127,7 +127,7 @@ body {
           font-family: "DM Mono", monospace;
           font-size: ms(-1);
           color: $neutral-500;
-          width: calc(100vw - #{ms(0) * 2});
+          width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
           overflow-x: scroll;
         }
       }

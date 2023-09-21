@@ -1,8 +1,8 @@
 import axios from "axios";
 
 /**
- * @property {number} lat Latitude of the city.
- * @property {number} lon Longitude of the city.
+ * lat: Latitude of the city
+ * lon: Longitude of the city
  */
 interface SymphonyRequest {
   lat: number;
@@ -10,8 +10,8 @@ interface SymphonyRequest {
 }
 
 /**
- * @property {string} temperature The temperature of the city.
- * @property {string} unit The unit of the temperature.
+ * temperature: The temperature of the city
+ * unit: The unit of the temperature
  */
 interface SymphonyResponse {
   temperature: number;
@@ -19,7 +19,7 @@ interface SymphonyResponse {
 }
 
 /**
- * @description Gets temperature of a city.
+ * Gets temperature of a city
  */
 export default async function handler(
   request: SymphonyRequest
