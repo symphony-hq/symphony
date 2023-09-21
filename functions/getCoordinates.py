@@ -28,6 +28,6 @@ def handler(request: SymphonyRequest) -> SymphonyResponse:
 
 if __name__ == "__main__":
     args = json.loads(sys.argv[1])
-    request = SymphonyRequest(address=args['address'])
+    request = SymphonyRequest(**args)
     response = handler(request)
     print(response.json())

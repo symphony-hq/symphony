@@ -28,6 +28,6 @@ def handler(request: SymphonyRequest) -> SymphonyResponse:
 
 if __name__ == "__main__":
     args = json.loads(sys.argv[1])
-    request = SymphonyRequest(matrix1=args['matrix1'], matrix2=args['matrix2'])
+    request = SymphonyRequest(**args)
     response = handler(request)
     print(response.json())
