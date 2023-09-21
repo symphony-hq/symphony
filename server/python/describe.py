@@ -1,82 +1,48 @@
-import ast
 import os
 import json
+from pydantic import BaseModel
+from typing import Any, Callable, Type
+import sys
 
-OPENAI_TYPES = {
-    'str': 'string',
-    'int': 'integer',
-}
+sys.path.insert(0, os.path.abspath('functions'))
 
+def generate_function_description(name, function: Callable[..., Any], request_model: Type[BaseModel], response_model: Type[BaseModel]) -> dict:
+    request_schema = request_model.model_json_schema()
+    response_schema = response_model.model_json_schema()
 
-def extract_function_signature_from_file(file_path):
-    with open(file_path, 'r') as source:
-        name = file_path.split("/")[2].replace('.', '-')
-        source_content = source.read()
-        node = ast.parse(source_content)
+    # Remove the title field
+    request_schema.pop('title', None)
+    response_schema.pop('title', None)
 
-        classes = {cls.name: cls for cls in node.body if isinstance(
-            cls, ast.ClassDef)}
-        functions = [f for f in node.body if isinstance(f, ast.FunctionDef)]
+    # Reorder the fields so that 'type' comes first
+    request_schema = {'type': request_schema['type'], **request_schema}
+    response_schema = {'type': response_schema['type'], **response_schema}
 
-        properties = {}
-        required = []
-        function_descriptions = {}
-
-        for _, class_node in classes.items():
-            if class_node.name == 'SymphonyRequest':
-                for n in class_node.body:
-                    if isinstance(n, ast.AnnAssign):
-                        if isinstance(n.target, ast.Name):
-                            property_name = n.target.id
-                            property_type = ast.get_source_segment(
-                                source_content, n.annotation)
-
-                            if 'Optional' in property_type:
-                                property_type = property_type.replace(
-                                    'Optional', '').replace('(', '').replace(')', '')
-                            else:
-                                required.append(property_name)
-
-                            property_description = n.value.s if isinstance(
-                                n.value, ast.Str) else 'No description provided'
-
-                            properties[property_name] = {
-                                'type': OPENAI_TYPES[property_type],
-                                'description': property_description
-                            }
-
-        for function in functions:
-            function_descriptions[function.name] = ast.get_docstring(function)
-
-        return {
-            'name': name,
-            'description': function_descriptions['handler'],
-            'parameters': {
-                'type': 'object',
-                'properties': properties
-            },
-            'required': required
-        }
-
-
-def get_all_python_files_in_directory(directory):
-    return [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.py')]
-
+    
+    function_description = {
+        "name": name,
+        "description": function.__doc__,
+        "parameters": request_schema,
+        "returns": response_schema,
+    }
+    return function_description
 
 def main(directory):
-    python_files = get_all_python_files_in_directory(directory)
     descriptions = []
-
-    for python_file in python_files:
-        description = extract_function_signature_from_file(
-            python_file)
-
-        descriptions.append(description)
+    for filename in os.listdir(directory):
+        if filename.endswith('.py'):
+            module_name = filename[:-3] 
+            module = __import__(f'{module_name}')
+            function = getattr(module, 'handler')
+            symphony_request = getattr(module, 'SymphonyRequest')
+            symphony_response = getattr(module, 'SymphonyResponse')
+            fn_name = module_name + '-py'
+            description = generate_function_description(fn_name, function, symphony_request, symphony_response)
+            descriptions.append(description)
 
     with open('./server/python/descriptions.json', 'w') as f:
         json.dump(descriptions, f, indent=4)
 
-
 if __name__ == '__main__':
-    directory = './functions'
+    directory = 'functions'
     main(directory)
