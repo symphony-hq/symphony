@@ -2,11 +2,13 @@ import { Server } from "ws";
 import { createServer } from "http";
 import { createMachine, interpret, EventObject, assign } from "xstate";
 import OpenAI from "openai";
-import * as functionDescriptions from "./descriptions.json";
+import * as typescriptFunctions from "./typescript/descriptions.json";
+import * as pythonFunctions from "./python/descriptions.json";
 import { pipe } from "fp-ts/lib/function";
 import * as RAR from "fp-ts/ReadonlyArray";
 import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
+import { exec } from "child_process";
 
 dotenv.config();
 
@@ -61,25 +63,53 @@ const machine = createMachine(
               );
 
               if (O.isSome(functionCall)) {
-                const name = functionCall.value.name;
+                const name = functionCall.value.name.replace("-", ".");
                 const args = JSON.parse(functionCall.value.arguments);
 
-                import(`../functions/${name}.ts`)
-                  .then(async (module) => {
-                    const result = await module.default(args);
+                if (name.includes(".ts")) {
+                  import(`../functions/${name}`)
+                    .then(async (module) => {
+                      const result = await module.default(args);
 
-                    const message = {
-                      role: "function",
-                      name,
-                      content: JSON.stringify(result),
-                    };
+                      const message = {
+                        role: "function",
+                        name: name.replace(".", "-"),
+                        content: JSON.stringify(result),
+                      };
 
-                    resolve(message);
-                  })
-                  .catch((err) => {
-                    console.error(`Failed to load function ${name}:`, err);
-                    resolve(null);
-                  });
+                      resolve(message);
+                    })
+                    .catch((err) => {
+                      console.error(`Failed to load function ${name}:`, err);
+                      resolve(null);
+                    });
+                } else if (name.includes(".py")) {
+                  const pythonInterpreterPath = "venv/bin/python3";
+                  const pythonScriptPath = `functions/${name}`;
+                  const argsString = JSON.stringify(args);
+                  
+                  exec(
+                    `${pythonInterpreterPath} ${pythonScriptPath} '${argsString}'`,
+                    (error, stdout) => {
+                      if (error) {
+                        console.error(
+                          `Failed to execute python script ${name}:`,
+                          error
+                        );
+
+                        resolve(null);
+                      } else {
+                        const message = {
+                          role: "function",
+                          name: name.replace(".", "-"),
+                          content: stdout,
+                        };
+
+                        resolve(message);
+                      }
+                    }
+                  );
+                }
               } else {
                 resolve(null);
               }
@@ -102,7 +132,7 @@ const machine = createMachine(
             openai.chat.completions.create({
               messages: [...context.messages, event.data],
               model: "gpt-4",
-              functions: functionDescriptions,
+              functions: [...typescriptFunctions, ...pythonFunctions],
             }),
           onDone: {
             target: "function",

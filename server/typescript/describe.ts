@@ -47,7 +47,7 @@ function generateMetadata(sourceFile: ts.SourceFile, fileName: string) {
     }
   });
 
-  metadata.name = fileName.replace(".ts", "");
+  metadata.name = fileName.replace(".", "-");
   return metadata;
 }
 
@@ -100,21 +100,23 @@ const readFiles = new Promise((resolve, reject) => {
       reject(error);
     }
 
-    files.forEach((fileName) => {
-      const code = fs.readFileSync(
-        `${FUNCTIONS_DIRECTORY}/${fileName}`,
-        "utf8"
-      );
-      const sourceFile = ts.createSourceFile(
-        "temp.ts",
-        code,
-        ts.ScriptTarget.Latest,
-        true
-      );
+    files
+      .filter((fileName) => fileName.endsWith(".ts"))
+      .forEach((fileName) => {
+        const code = fs.readFileSync(
+          `${FUNCTIONS_DIRECTORY}/${fileName}`,
+          "utf8"
+        );
+        const sourceFile = ts.createSourceFile(
+          "temp.ts",
+          code,
+          ts.ScriptTarget.Latest,
+          true
+        );
 
-      const metadata = generateMetadata(sourceFile, fileName);
-      metadatas.push(metadata);
-    });
+        const metadata = generateMetadata(sourceFile, fileName);
+        metadatas.push(metadata);
+      });
 
     resolve(metadatas);
   });
@@ -123,7 +125,7 @@ const readFiles = new Promise((resolve, reject) => {
 readFiles
   .then((metadatas) => {
     fs.writeFileSync(
-      "./server/descriptions.json",
+      "./server/typescript/descriptions.json",
       JSON.stringify(metadatas, null, 2)
     );
   })

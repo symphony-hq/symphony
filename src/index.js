@@ -9,7 +9,10 @@ const Message = ({ message }) => {
       <div className={cx("avatar", { user: message.role === "user" })} />
       {message.function_call ? (
         <div className="function">
-          <div className="name">{`Calling ${message.function_call.name}`}</div>
+          <div className="name">{`Calling ${message.function_call.name.replace(
+            "-",
+            "."
+          )}`}</div>
           <pre className="json">
             {JSON.stringify(
               JSON.parse(message.function_call.arguments),
@@ -29,6 +32,17 @@ const Message = ({ message }) => {
         <div className="content">{message.content}</div>
       )}
     </div>
+  );
+};
+
+const ChainOfThought = ({ messages }) => {
+  return (
+    <details open>
+      <summary>Chain of Thought</summary>
+      {messages.map((message, index) => (
+        <Message key={index} {...{ message }} />
+      ))}
+    </details>
   );
 };
 
@@ -83,10 +97,33 @@ const App = () => {
       </div>
 
       <div className="conversation">
+
         <div className="messages" ref={messagesRef}>
-          {messages.map((message, index) => (
-            <Message key={index} {...{ message }} />
-          ))}
+          {messages.map((message, index, allMessages) => {
+            if (message.role === "user") {
+              // Find all function messages after this user message and before the next user message
+              const functionMessages = [];
+              for (let i = index + 1; i < allMessages.length; i++) {
+                if (allMessages[i].role === "user") break;
+                if (
+                  allMessages[i].function_call ||
+                  allMessages[i].role === "function"
+                ) {
+                  functionMessages.push(allMessages[i]);
+                }
+              }
+              return (
+                <React.Fragment key={index}>
+                  <Message {...{ message }} />
+                  {functionMessages.length > 0 && (
+                    <ChainOfThought messages={functionMessages} />
+                  )}
+                </React.Fragment>
+              );
+            } else if (!message.function_call && message.role !== "function") {
+              return <Message key={index} {...{ message }} />;
+            }
+          })}
         </div>
       </div>
 
