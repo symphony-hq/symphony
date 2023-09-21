@@ -3,11 +3,14 @@ import json
 import sys
 from pydantic import BaseModel
 
+
 class SymphonyRequest(BaseModel):
     pass  # No input required for this function
 
+
 class SymphonyResponse(BaseModel):
     facts: list  # The list of dog facts
+
 
 def handler(request: SymphonyRequest) -> SymphonyResponse:
     """
@@ -17,6 +20,7 @@ def handler(request: SymphonyRequest) -> SymphonyResponse:
     data = response.json()
 
     return SymphonyResponse(facts=data['facts'])
+
 
 if __name__ == "__main__":
     args = json.loads(sys.argv[1])

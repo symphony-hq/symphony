@@ -1,7 +1,7 @@
 [
     {
         "name": "getDogFacts-py",
-        "description": "\n    Fetches dog facts from an API.\n    ",
+        "description": "Fetches dog facts from an API.",
         "parameters": {
             "type": "object",
             "properties": {}
@@ -22,7 +22,7 @@
     },
     {
         "name": "getMatrixMul-py",
-        "description": "\n    Multiplies two matrices.\n    ",
+        "description": "Multiplies two matrices.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -73,7 +73,7 @@
     },
     {
         "name": "getCoordinates-py",
-        "description": "\n    Returns the latitude and longitude of the given IP address.\n    ",
+        "description": "Returns the latitude and longitude of the given IP address.",
         "parameters": {
             "type": "object",
             "properties": {

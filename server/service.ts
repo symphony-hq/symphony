@@ -87,7 +87,7 @@ const machine = createMachine(
                   const pythonInterpreterPath = "venv/bin/python3";
                   const pythonScriptPath = `functions/${name}`;
                   const argsString = JSON.stringify(args);
-                  
+
                   exec(
                     `${pythonInterpreterPath} ${pythonScriptPath} '${argsString}'`,
                     (error, stdout) => {

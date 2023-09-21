@@ -4,12 +4,15 @@ import json
 import sys
 from pydantic import BaseModel
 
+
 class SymphonyRequest(BaseModel):
     address: str  # The IP address to get the coordinates of. Defaults to 'me'.
+
 
 class SymphonyResponse(BaseModel):
     lat: float
     lng: float
+
 
 def handler(request: SymphonyRequest) -> SymphonyResponse:
     """
