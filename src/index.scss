@@ -29,6 +29,25 @@ body {
   font-family: "DM Sans", sans-serif;
 }
 
+details {
+  margin: 10px 0;
+  border: 1px solid $neutral-300;
+  border-radius: 5px;
+  padding: 10px;
+  background-color: rgba(245, 245, 245, 0.7); /* Light gray with 70% opacity */
+
+  .message .avatar {
+    margin-top: 10px; /* Add a top margin to align with the message text */
+  }
+}
+
+summary {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: $neutral-700;
+  cursor: pointer;
+}
+
 .page {
   height: 100dvh;
   width: 100vw;
@@ -45,7 +64,7 @@ body {
 
     .name {
       font-size: ms(-1);
-      color: $neutral-500;
+      color: $neutral-600;
     }
 
     .status {
@@ -119,6 +138,9 @@ body {
         }
 
         .function {
+          margin-top: 10px;
+          font-size: 0.9em;
+          color: $neutral-600;
           border-radius: ms(-8);
         }
 
@@ -153,4 +175,5 @@ body {
   .send {
     font-size: ms(0);
   }
+
 }
