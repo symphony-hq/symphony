@@ -86,9 +86,10 @@ const machine = createMachine(
                 } else if (name.includes(".py")) {
                   const pythonInterpreterPath = "venv/bin/python3";
                   const pythonScriptPath = `functions/${name}`;
-
+                  const argsString = JSON.stringify(args);
+                  
                   exec(
-                    `${pythonInterpreterPath} ${pythonScriptPath}`,
+                    `${pythonInterpreterPath} ${pythonScriptPath} '${argsString}'`,
                     (error, stdout) => {
                       if (error) {
                         console.error(
