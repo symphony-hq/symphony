@@ -9,7 +9,10 @@ const Message = ({ message }) => {
       <div className={cx("avatar", { user: message.role === "user" })} />
       {message.function_call ? (
         <div className="function">
-          <div className="name">{`Calling ${message.function_call.name}`}</div>
+          <div className="name">{`Calling ${message.function_call.name.replace(
+            "-",
+            "."
+          )}`}</div>
           <pre className="json">
             {JSON.stringify(
               JSON.parse(message.function_call.arguments),
@@ -20,7 +23,10 @@ const Message = ({ message }) => {
         </div>
       ) : message.role === "function" ? (
         <div className="function">
-          <div className="name">{`Output of ${message.name}`}</div>
+          <div className="name">{`Output of ${message.name.replace(
+            "-",
+            "."
+          )}`}</div>
           <pre className="json">
             {JSON.stringify(JSON.parse(message.content), null, 2)}
           </pre>
