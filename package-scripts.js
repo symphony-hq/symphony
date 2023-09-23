@@ -21,8 +21,8 @@ module.exports = {
       default: "yarn nps initialize.py",
     },
     describe: {
-      ts: "nodemon --watch functions --exec yarn ts-node server/typescript/describe.ts",
-      py: "nodemon --watch functions --exec python3 server/python/describe.py",
+      ts: "nodemon --watch functions -e ts --exec yarn ts-node server/typescript/describe.ts",
+      py: "nodemon --watch functions -e py --exec venv/bin/python3 server/python/describe.py",
       all: npsUtils.concurrent.nps("describe.ts", "describe.py"),
     },
     service: "ts-node server/service.ts",
