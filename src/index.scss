@@ -126,6 +126,12 @@ body {
           }
         }
 
+        .content,
+        .function,
+        .json {
+          width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
+        }
+
         .content {
           white-space: pre-wrap;
         }
@@ -139,7 +145,6 @@ body {
           font-family: "apercu mono", monospace;
           font-size: ms(-1);
           color: $neutral-500;
-          width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
           overflow-x: scroll;
         }
       }

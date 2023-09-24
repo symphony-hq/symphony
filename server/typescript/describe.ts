@@ -7,6 +7,7 @@ interface Schema {
   name: string;
   description: string;
   parameters: any;
+  returns: any;
 }
 
 function getSchema(propertyType) {
@@ -63,12 +64,15 @@ function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
     name: "",
     description: "",
     parameters: {},
+    returns: {},
   };
 
   ts.forEachChild(sourceFile, (node) => {
     if (ts.isInterfaceDeclaration(node)) {
       if (node.name.text === "SymphonyRequest") {
         schema.parameters = extractParameters(node);
+      } else if (node.name.text === "SymphonyResponse") {
+        schema.returns = extractParameters(node);
       }
     }
 

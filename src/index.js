@@ -1,9 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.scss";
 import cx from "classnames";
 
 const Message = ({ message }) => {
+  const Component = React.lazy(() =>
+    import(`./components/${message.name.replace(".", "-")}.tsx`),
+  );
+
   return (
     <div className="message">
       <div className={cx("avatar", { user: message.role === "user" })} />
@@ -11,13 +15,13 @@ const Message = ({ message }) => {
         <div className="function">
           <div className="name">{`Calling ${message.function_call.name.replace(
             "-",
-            "."
+            ".",
           )}`}</div>
           <pre className="json">
             {JSON.stringify(
               JSON.parse(message.function_call.arguments),
               null,
-              2
+              2,
             )}
           </pre>
         </div>
@@ -25,11 +29,12 @@ const Message = ({ message }) => {
         <div className="function">
           <div className="name">{`Output of ${message.name.replace(
             "-",
-            "."
+            ".",
           )}`}</div>
-          <pre className="json">
-            {JSON.stringify(JSON.parse(message.content), null, 2)}
-          </pre>
+
+          <Suspense>
+            <Component props={JSON.parse(message.content)} />
+          </Suspense>
         </div>
       ) : (
         <div className="content">{message.content}</div>

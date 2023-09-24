@@ -18,6 +18,23 @@
         "lat",
         "lon"
       ]
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "description": "The temperature of the city"
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of the temperature"
+        }
+      },
+      "required": [
+        "temperature",
+        "unit"
+      ]
     }
   },
   {
@@ -29,6 +46,17 @@
         "value": {
           "type": "number",
           "description": "Value in Kelvin"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
         }
       },
       "required": [

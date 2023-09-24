@@ -25,9 +25,10 @@ module.exports = {
       py: "nodemon --watch functions -e py --exec venv/bin/python3 server/python/describe.py",
       all: npsUtils.concurrent.nps("describe.ts", "describe.py"),
     },
+    jig: "nodemon --watch server -e json --exec yarn ts-node server/jig.ts",
     service: "ts-node server/service.ts",
     studio: "react-scripts start",
-    start: npsUtils.concurrent.nps("describe.all", "service", "studio"),
+    start: npsUtils.concurrent.nps("describe.all", "service", "studio", "jig"),
     clean: {
       ts: "yarn rimraf node_modules",
       py: "yarn rimraf venv",

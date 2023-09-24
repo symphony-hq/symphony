@@ -10,6 +10,7 @@
     "classnames": "^2.3.2",
     "dotenv": "^16.3.1",
     "fp-ts": "^2.16.1",
+    "mapbox-gl": "^2.15.0",
     "nps": "^5.10.0",
     "nps-utils": "^1.7.0",
     "openai": "^4.6.0",
@@ -23,13 +24,13 @@
   "devDependencies": {
     "modularscale-sass": "^3.0.10",
     "nodemon": "^3.0.1",
+    "prettier": "^3.0.3",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
