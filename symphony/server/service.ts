@@ -67,7 +67,7 @@ const machine = createMachine(
                 const args = JSON.parse(functionCall.value.arguments);
 
                 if (name.includes(".ts")) {
-                  import(`../functions/${name}`)
+                  import(`../../functions/${name}`)
                     .then(async (module) => {
                       const result = await module.default(args);
 
