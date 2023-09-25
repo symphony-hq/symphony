@@ -25,7 +25,7 @@ module.exports = {
       py: "nodemon --watch functions -e py --exec venv/bin/python3 symphony/server/python/describe.py",
       all: npsUtils.concurrent.nps("describe.ts", "describe.py"),
     },
-    jig: "nodemon --watch server -e json --exec yarn ts-node symphony/server/jig.ts",
+    jig: "nodemon --watch symphony/server -e json --exec yarn ts-node symphony/server/jig.ts",
     service: "ts-node symphony/server/service.ts",
     client: "yarn vite --port 3000",
     start: npsUtils.concurrent.nps("describe.all", "service", "client", "jig"),

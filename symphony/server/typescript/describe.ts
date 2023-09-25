@@ -45,7 +45,7 @@ function extractParameters(node: ts.InterfaceDeclaration) {
       for (const comment of jsDocComments) {
         const commentText = comment.getFullText();
         const propertyCommentMatch = new RegExp(`${name}: (.*)`).exec(
-          commentText
+          commentText,
         );
 
         if (propertyCommentMatch && propertyCommentMatch[1]) {
@@ -107,14 +107,14 @@ const readFiles = new Promise((resolve, reject) => {
       .forEach((fileName) => {
         const content = fs.readFileSync(
           `${FUNCTIONS_DIRECTORY}/${fileName}`,
-          "utf8"
+          "utf8",
         );
 
         const sourceFile = ts.createSourceFile(
           "temp.ts",
           content,
           ts.ScriptTarget.Latest,
-          true
+          true,
         );
 
         const metadata = generateSchema(sourceFile, fileName);
@@ -129,7 +129,7 @@ readFiles
   .then((metadatas) => {
     fs.writeFileSync(
       "./symphony/server/typescript/descriptions.json",
-      JSON.stringify(metadatas, null, 2)
+      JSON.stringify(metadatas, null, 2),
     );
   })
   .catch((error) => console.log(error));

@@ -2,158 +2,75 @@ import * as pythonDescriptions from "./python/descriptions.json";
 import * as typescriptDescriptions from "./typescript/descriptions.json";
 import { pipe } from "fp-ts/lib/function";
 import * as RAR from "fp-ts/ReadonlyArray";
-import * as O from "fp-ts/Option";
-import * as ts from "typescript";
-import * as prettier from "prettier";
 import * as fs from "fs";
+import { Project } from "ts-morph";
 
-function createComponents() {
+function createInterfaces() {
   pipe(
     [...pythonDescriptions, ...typescriptDescriptions],
     RAR.map((fx) => {
       const { name } = fx;
       const filePath = `./interfaces/${name}.tsx`;
 
+      const source = `import React from "react";
+
+      interface Response {}
+      
+      export default function Component({ props }: { props: Response }) {
+        return <pre className="json">{JSON.stringify(props, null, 2)}</pre>;
+      }               
+      `;
+
       if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, "", { flag: "w" });
+        fs.writeFileSync(filePath, source, { flag: "w" });
       }
 
       return fx;
     }),
     RAR.map(async (fx) => {
       const { name, returns } = fx;
+
       const filePath = `./interfaces/${name}.tsx`;
 
-      const sourceFile = ts.createSourceFile(
-        "temp.ts",
-        fs.readFileSync(filePath, "utf8"),
-        ts.ScriptTarget.Latest,
-        true,
-        ts.ScriptKind.TSX
-      );
-
-      const properties = pipe(
+      const propertiesFromDescriptions = pipe(
         Object.keys(returns.properties),
-        RAR.map((key) => {
-          const property = returns.properties[key];
+        RAR.map((name) => {
+          const property = returns.properties[name];
           const type = property.type;
 
-          const typeNode = ts.factory.createKeywordTypeNode(
-            type === "string"
-              ? ts.SyntaxKind.StringKeyword
-              : type === "number"
-              ? ts.SyntaxKind.NumberKeyword
-              : type === "boolean"
-              ? ts.SyntaxKind.BooleanKeyword
-              : ts.SyntaxKind.AnyKeyword
-          );
-
-          return ts.factory.createPropertySignature(
-            undefined,
-            ts.factory.createIdentifier(key),
-            undefined,
-            typeNode
-          );
+          return {
+            name,
+            type,
+          };
         })
       );
 
-      const newInterface = ts.factory.createInterfaceDeclaration(
-        undefined,
-        "Response",
-        undefined,
-        undefined,
-        properties
-      );
+      const project = new Project();
+      const sourceFile = project.addSourceFileAtPath(filePath);
+      const responseInterface = sourceFile.getInterface("Response")!;
+      const responseProperties = responseInterface.getProperties();
 
-      const updatedStatements = pipe(
-        [...sourceFile.statements],
-        RAR.findIndex(
-          (node: ts.Node) =>
-            ts.isInterfaceDeclaration(node) && node.name.text === "Response"
-        ),
-        O.map((index) =>
-          pipe(
-            sourceFile.statements,
-            RAR.chainWithIndex((statementIndex, statement) =>
-              index === statementIndex ? [newInterface] : [statement]
-            )
-          )
-        ),
-        O.getOrElse(() => sourceFile.statements)
-      );
+      responseProperties.map((property) => {
+        property.remove();
+      });
 
-      const responseInterface = pipe(
-        sourceFile.statements,
-        RAR.findFirst(
-          (node: ts.Node) =>
-            ts.isInterfaceDeclaration(node) && node.name.text === "Response"
-        )
-      );
+      propertiesFromDescriptions.map(({ name, type }) => {
+        responseInterface.addProperty({
+          name: name,
+          type: type,
+          hasQuestionToken: !returns.required.includes(name),
+        });
+      });
 
-      if (O.isSome(responseInterface)) {
-        const sourceFile = ts.createSourceFile(
-          "temp.ts",
-          fs.readFileSync(filePath, "utf8"),
-          ts.ScriptTarget.Latest,
-          true,
-          ts.ScriptKind.TSX
-        );
+      sourceFile.formatText({
+        indentSize: 2,
+      });
 
-        const updatedSourceFile = ts.factory.updateSourceFile(
-          sourceFile,
-          updatedStatements
-        );
+      await sourceFile.save();
 
-        const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-        const updatedSource = printer.printFile(updatedSourceFile);
-
-        await prettier
-          .format(updatedSource, {
-            parser: "typescript",
-            printWidth: 200,
-          })
-          .then((formattedUpdatedSource) => {
-            fs.writeFileSync(filePath, formattedUpdatedSource);
-          });
-      } else {
-        const interfaceDeclaration = ts.factory.createInterfaceDeclaration(
-          undefined,
-          "Response",
-          undefined,
-          undefined,
-          properties
-        );
-
-        const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-
-        const interfaceString = printer.printNode(
-          ts.EmitHint.Unspecified,
-          interfaceDeclaration,
-          sourceFile
-        );
-
-        const source = `
-        import React from "react";
-
-        ${interfaceString}
-        
-        export default function Component({ props }: { props: Response }) {
-          return <pre className="json">{JSON.stringify(props, null, 2)}</pre>;
-        }               
-        `;
-
-        await prettier
-          .format(source, {
-            parser: "typescript",
-          })
-          .then((formattedUpdatedSource) => {
-            fs.writeFileSync(filePath, formattedUpdatedSource);
-          });
-      }
       return fx;
     })
   );
 }
 
-createComponents();
+createInterfaces();

@@ -56,7 +56,8 @@
       "type": "object",
       "properties": {
         "value": {
-          "type": "number"
+          "type": "number",
+          "description": "Value in Celsius"
         }
       },
       "required": [
