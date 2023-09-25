@@ -118,7 +118,17 @@ const machine = createMachine(
             {
               target: "gpt4",
               cond: (_, event) => event.data,
-              actions: ["sendFunctionMessageToClients"],
+              actions: [
+                "sendFunctionMessageToClients",
+                assign({
+                  messages: (context, event) => {
+                    const { messages } = context;
+                    const { data: message } = event;
+
+                    return [...messages, message];
+                  },
+                }),
+              ],
             },
             {
               target: "idle",
@@ -149,20 +159,39 @@ const machine = createMachine(
           },
         },
       },
+      restore: {
+        invoke: {
+          src: () =>
+            new Promise((resolve) => {
+              resolve({});
+            }),
+          onDone: {
+            target: "idle",
+            actions: ["sendAllMessagesToClients"],
+          },
+        },
+      },
       idle: {
         on: {
-          CLIENT_MESSAGE: {
-            target: "gpt4",
-            actions: [
-              assign({
-                messages: (context, event) => {
-                  const { messages } = context;
-                  const { data } = event as SymphonyEvent;
-                  return [...messages, data];
-                },
-              }),
-            ],
-          },
+          CLIENT_MESSAGE: [
+            {
+              target: "gpt4",
+              cond: (_, event) => event.data.role === "user",
+              actions: [
+                assign({
+                  messages: (context, event) => {
+                    const { messages } = context;
+                    const { data } = event as SymphonyEvent;
+                    return [...messages, data];
+                  },
+                }),
+              ],
+            },
+            {
+              target: "restore",
+              cond: (_, event) => event.data.role === "restore",
+            },
+          ],
         },
       },
     },
@@ -181,6 +210,17 @@ const machine = createMachine(
 
         wss.clients.forEach((client) => {
           client.send(JSON.stringify(message));
+        });
+      },
+      sendAllMessagesToClients: (context) => {
+        const { messages } = context;
+
+        wss.clients.forEach((client) => {
+          messages
+            .filter((message) => message.role !== "system")
+            .map((message) => {
+              client.send(JSON.stringify(message));
+            });
         });
       },
     },

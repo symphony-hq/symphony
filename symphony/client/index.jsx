@@ -3,10 +3,19 @@ import ReactDOM from "react-dom/client";
 import "./index.scss";
 import cx from "classnames";
 
+const componentCache = {};
+
+const getComponent = (name) => {
+  if (!componentCache[name]) {
+    componentCache[name] = React.lazy(() =>
+      import(`../../interfaces/${name.replace(".", "-")}.tsx`)
+    );
+  }
+  return componentCache[name];
+};
+
 const Message = ({ message }) => {
-  const Component = React.lazy(() =>
-    import(`../../interfaces/${message.name.replace(".", "-")}.tsx`),
-  );
+  const Component = getComponent(message.name);
 
   return (
     <div className="message">
@@ -15,13 +24,13 @@ const Message = ({ message }) => {
         <div className="function">
           <div className="name">{`Calling ${message.function_call.name.replace(
             "-",
-            ".",
+            "."
           )}`}</div>
           <pre className="json">
             {JSON.stringify(
               JSON.parse(message.function_call.arguments),
               null,
-              2,
+              2
             )}
           </pre>
         </div>
@@ -29,7 +38,7 @@ const Message = ({ message }) => {
         <div className="function">
           <div className="name">{`Output of ${message.name.replace(
             "-",
-            ".",
+            "."
           )}`}</div>
 
           <Suspense>
@@ -53,6 +62,9 @@ const App = () => {
 
     socket.addEventListener("open", () => {
       console.log("Connected to Symphony Service");
+
+      socket.send(JSON.stringify({ role: "restore", content: "" }));
+
       setIsConnected(true);
     });
 
@@ -76,11 +88,19 @@ const App = () => {
   }, []);
 
   const messagesRef = useRef();
+
   useEffect(() => {
     if (messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      const observer = new MutationObserver(() => {
+        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+      });
+
+      const config = { attributes: false, childList: true, subtree: false };
+      observer.observe(messagesRef.current, config);
+
+      return () => observer.disconnect();
     }
-  });
+  }, [messagesRef.current]);
 
   return (
     <div className="page">

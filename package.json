@@ -24,6 +24,7 @@
     "@vitejs/plugin-react-swc": "^3.4.0",
     "modularscale-sass": "^3.0.10",
     "nodemon": "^3.0.1",
+    "prettier": "^3.0.3",
     "ts-morph": "^20.0.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"

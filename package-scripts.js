@@ -30,8 +30,8 @@ module.exports = {
     client: "yarn vite --port 3000",
     start: npsUtils.concurrent.nps("describe.all", "service", "client", "jig"),
     clean: {
-      ts: "yarn rimraf node_modules",
-      py: "yarn rimraf venv",
+      ts: "rm -rf node_modules",
+      py: "rm -rf venv",
       all: npsUtils.concurrent.nps("clean.ts", "clean.py"),
       default: "yarn nps clean.all",
     },
