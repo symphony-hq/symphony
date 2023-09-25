@@ -5,23 +5,23 @@
     "start": "nps"
   },
   "dependencies": {
-    "@types/node": "^20.6.0",
     "axios": "^1.5.0",
     "classnames": "^2.3.2",
     "dotenv": "^16.3.1",
     "fp-ts": "^2.16.1",
-    "mapbox-gl": "^2.15.0",
     "nps": "^5.10.0",
     "nps-utils": "^1.7.0",
     "openai": "^4.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
     "sass": "^1.67.0",
+    "vite": "^4.4.9",
     "ws": "^8.14.1",
     "xstate": "^4.38.2"
   },
   "devDependencies": {
+    "@types/node": "^20.6.0",
+    "@vitejs/plugin-react-swc": "^3.4.0",
     "modularscale-sass": "^3.0.10",
     "nodemon": "^3.0.1",
     "prettier": "^3.0.3",

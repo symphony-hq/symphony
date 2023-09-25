@@ -128,7 +128,7 @@ const readFiles = new Promise((resolve, reject) => {
 readFiles
   .then((metadatas) => {
     fs.writeFileSync(
-      "./server/typescript/descriptions.json",
+      "./symphony/server/typescript/descriptions.json",
       JSON.stringify(metadatas, null, 2)
     );
   })

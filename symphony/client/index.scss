@@ -1,15 +1,15 @@
-@import "~modularscale-sass/stylesheets/modularscale";
+@import "../node_modules/modularscale-sass/stylesheets/modularscale";
 
 @font-face {
   font-family: "apercu";
-  src: url("../public/fonts/apercu-regular.woff2") format("woff2");
+  src: url("public/fonts/apercu-regular.woff2") format("woff2");
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
   font-family: "apercu mono";
-  src: url("../public/fonts/apercu-mono.woff2") format("woff2");
+  src: url("public/fonts/apercu-mono.woff2") format("woff2");
   font-style: normal;
   font-display: swap;
 }

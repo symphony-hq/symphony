@@ -5,14 +5,14 @@ import * as RAR from "fp-ts/ReadonlyArray";
 import * as O from "fp-ts/Option";
 import * as ts from "typescript";
 import * as prettier from "prettier";
-const fs = require("fs");
+import * as fs from "fs";
 
 function createComponents() {
   pipe(
     [...pythonDescriptions, ...typescriptDescriptions],
     RAR.map((fx) => {
       const { name } = fx;
-      const filePath = `./src/components/${name}.tsx`;
+      const filePath = `./interfaces/${name}.tsx`;
 
       if (!fs.existsSync(filePath)) {
         fs.writeFileSync(filePath, "", { flag: "w" });
@@ -22,7 +22,7 @@ function createComponents() {
     }),
     RAR.map(async (fx) => {
       const { name, returns } = fx;
-      const filePath = `./src/components/${name}.tsx`;
+      const filePath = `./interfaces/${name}.tsx`;
 
       const sourceFile = ts.createSourceFile(
         "temp.ts",

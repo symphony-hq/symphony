@@ -5,7 +5,7 @@ import cx from "classnames";
 
 const Message = ({ message }) => {
   const Component = React.lazy(() =>
-    import(`./components/${message.name.replace(".", "-")}.tsx`),
+    import(`../../interfaces/${message.name.replace(".", "-")}.tsx`),
   );
 
   return (

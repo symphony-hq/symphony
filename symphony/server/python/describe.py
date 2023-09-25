@@ -51,7 +51,7 @@ def main(directory):
                 fn_name, function, symphony_request, symphony_response)
             descriptions.append(description)
 
-    with open('./server/python/descriptions.json', 'w') as f:
+    with open('./symphony/server/python/descriptions.json', 'w') as f:
         json.dump(descriptions, f, indent=4)
 
 
