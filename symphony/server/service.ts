@@ -1,4 +1,4 @@
-import { Server } from "ws";
+import { Server, WebSocket } from "ws";
 import { createServer } from "http";
 import { createMachine, interpret, EventObject, assign } from "xstate";
 import OpenAI from "openai";
@@ -201,21 +201,21 @@ const machine = createMachine(
       sendAssistantMessageToClients: (_, event) => {
         const { message } = event.data.choices[0];
 
-        wss.clients.forEach((client) => {
+        wss.clients.forEach((client: WebSocket) => {
           client.send(JSON.stringify(message));
         });
       },
       sendFunctionMessageToClients: (_, event) => {
         const { data: message } = event;
 
-        wss.clients.forEach((client) => {
+        wss.clients.forEach((client: WebSocket) => {
           client.send(JSON.stringify(message));
         });
       },
       sendAllMessagesToClients: (context) => {
         const { messages } = context;
 
-        wss.clients.forEach((client) => {
+        wss.clients.forEach((client: WebSocket) => {
           messages
             .filter((message) => message.role !== "system")
             .map((message) => {
@@ -229,8 +229,10 @@ const machine = createMachine(
 
 const service = interpret(machine).start();
 
-wss.on("connection", (connection) => {
-  connection.on("message", (message) => {
+type Data = string | Buffer | ArrayBuffer | Buffer[] | ArrayBufferView;
+
+wss.on("connection", (connection: WebSocket) => {
+  connection.on("message", (message: Data) => {
     const decodedMessage = message.toString();
     const parsedMessage = JSON.parse(decodedMessage);
 

@@ -3,11 +3,29 @@ import * as fs from "fs";
 
 const FUNCTIONS_DIRECTORY = "./functions";
 
+interface Properties {
+  [key: string]: {
+    type: string;
+    description?: string;
+    items?: {
+      type: string;
+    };
+  };
+}
+
+interface Parameters {
+  type: string;
+  properties: Properties;
+  required: string[];
+}
+
+type Returns = Parameters;
+
 interface Schema {
   name: string;
   description: string;
-  parameters: any;
-  returns: any;
+  parameters: Parameters;
+  returns: Returns;
 }
 
 function getSchema(propertyType) {
@@ -23,7 +41,7 @@ function getSchema(propertyType) {
 }
 
 function extractParameters(node: ts.InterfaceDeclaration) {
-  let parameters: any = {
+  const parameters: Parameters = {
     type: "object",
     properties: {},
     required: [],
@@ -45,7 +63,7 @@ function extractParameters(node: ts.InterfaceDeclaration) {
       for (const comment of jsDocComments) {
         const commentText = comment.getFullText();
         const propertyCommentMatch = new RegExp(`${name}: (.*)`).exec(
-          commentText,
+          commentText
         );
 
         if (propertyCommentMatch && propertyCommentMatch[1]) {
@@ -60,11 +78,19 @@ function extractParameters(node: ts.InterfaceDeclaration) {
 }
 
 function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
-  let schema: Schema = {
+  const schema: Schema = {
     name: "",
     description: "",
-    parameters: {},
-    returns: {},
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+    returns: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
   };
 
   ts.forEachChild(sourceFile, (node) => {
@@ -95,7 +121,7 @@ function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
 }
 
 const readFiles = new Promise((resolve, reject) => {
-  let metadatas = [] as any;
+  const schemas = [] as Schema[];
 
   fs.readdir(FUNCTIONS_DIRECTORY, (error, files) => {
     if (error) {
@@ -107,21 +133,21 @@ const readFiles = new Promise((resolve, reject) => {
       .forEach((fileName) => {
         const content = fs.readFileSync(
           `${FUNCTIONS_DIRECTORY}/${fileName}`,
-          "utf8",
+          "utf8"
         );
 
         const sourceFile = ts.createSourceFile(
           "temp.ts",
           content,
           ts.ScriptTarget.Latest,
-          true,
+          true
         );
 
-        const metadata = generateSchema(sourceFile, fileName);
-        metadatas.push(metadata);
+        const schema = generateSchema(sourceFile, fileName);
+        schemas.push(schema);
       });
 
-    resolve(metadatas);
+    resolve(schemas);
   });
 });
 
@@ -129,7 +155,7 @@ readFiles
   .then((metadatas) => {
     fs.writeFileSync(
       "./symphony/server/typescript/descriptions.json",
-      JSON.stringify(metadatas, null, 2),
+      JSON.stringify(metadatas, null, 2)
     );
   })
   .catch((error) => console.log(error));
