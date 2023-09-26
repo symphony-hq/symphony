@@ -39,6 +39,27 @@ const machine = createMachine(
       ],
     },
     predictableActionArguments: true,
+    on: {
+      CLIENT_MESSAGE: [
+        {
+          target: "gpt4",
+          cond: (_, event) => event.data.role === "user",
+          actions: [
+            assign({
+              messages: (context, event) => {
+                const { messages } = context;
+                const { data } = event as SymphonyEvent;
+                return [...messages, data];
+              },
+            }),
+          ],
+        },
+        {
+          target: "restore",
+          cond: (_, event) => event.data.role === "restore",
+        },
+      ],
+    },
     states: {
       function: {
         invoke: {
@@ -70,9 +91,18 @@ const machine = createMachine(
 
                       resolve(message);
                     })
-                    .catch((err) => {
-                      console.error(`Failed to load function ${name}:`, err);
-                      resolve(null);
+                    .catch((error) => {
+                      console.error(`Failed to load function ${name}:`, error);
+
+                      const message = {
+                        role: "function",
+                        name: encodeFunctionName(name),
+                        content: JSON.stringify({
+                          errorMessage: error.message,
+                        }),
+                      };
+
+                      resolve(message);
                     });
                 } else if (name.includes(".py")) {
                   const pythonInterpreterPath = "venv/bin/python3";
@@ -88,7 +118,15 @@ const machine = createMachine(
                           error
                         );
 
-                        resolve(null);
+                        const message = {
+                          role: "function",
+                          name: encodeFunctionName(name),
+                          content: JSON.stringify({
+                            errorMessage: error.message,
+                          }),
+                        };
+
+                        resolve(message);
                       } else {
                         const message = {
                           role: "function",
@@ -170,29 +208,7 @@ const machine = createMachine(
           },
         },
       },
-      idle: {
-        on: {
-          CLIENT_MESSAGE: [
-            {
-              target: "gpt4",
-              cond: (_, event) => event.data.role === "user",
-              actions: [
-                assign({
-                  messages: (context, event) => {
-                    const { messages } = context;
-                    const { data } = event as SymphonyEvent;
-                    return [...messages, data];
-                  },
-                }),
-              ],
-            },
-            {
-              target: "restore",
-              cond: (_, event) => event.data.role === "restore",
-            },
-          ],
-        },
-      },
+      idle: {},
     },
   },
   {
