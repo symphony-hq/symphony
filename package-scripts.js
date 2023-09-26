@@ -29,7 +29,7 @@ module.exports = {
     service: "ts-node symphony/server/service.ts",
     client: "yarn vite --port 3000",
     start: npsUtils.concurrent.nps("describe.all", "service", "client", "jig"),
-    lint: "eslint --ext .ts,.tsx,.js,.jsx --fix --quiet symphony",
+    lint: "eslint .",
     clean: {
       ts: "rm -rf node_modules",
       py: "rm -rf venv",

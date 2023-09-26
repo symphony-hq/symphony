@@ -1,20 +1,23 @@
-import React, { Suspense, useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom/client";
+import * as React from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import * as ReactDOM from "react-dom/client";
+import * as cx from "classnames";
+import { encodeFunctionName, decodeFunctionName } from "../utils/functions";
+import { Message } from "../utils/types";
 import "./index.scss";
-import cx from "classnames";
 
 const componentCache = {};
 
-const getComponent = (name) => {
+const getComponent = (name: string) => {
   if (!componentCache[name]) {
-    componentCache[name] = React.lazy(() =>
-      import(`../../interfaces/${name.replace(".", "-")}.tsx`)
+    componentCache[name] = React.lazy(
+      () => import(`../../interfaces/${encodeFunctionName(name)}.tsx`)
     );
   }
   return componentCache[name];
 };
 
-const Message = ({ message }) => {
+const Message = ({ message }: { message: Message }) => {
   const Component = getComponent(message.name);
 
   return (
@@ -22,10 +25,9 @@ const Message = ({ message }) => {
       <div className={cx("avatar", { user: message.role === "user" })} />
       {message.function_call ? (
         <div className="function">
-          <div className="name">{`Calling ${message.function_call.name.replace(
-            "-",
-            "."
-          )}`}</div>
+          <div className="name">
+            {`Calling ${decodeFunctionName(message.function_call.name)}`}
+          </div>
           <pre className="json">
             {JSON.stringify(
               JSON.parse(message.function_call.arguments),
@@ -36,10 +38,9 @@ const Message = ({ message }) => {
         </div>
       ) : message.role === "function" ? (
         <div className="function">
-          <div className="name">{`Output of ${message.name.replace(
-            "-",
-            "."
-          )}`}</div>
+          <div className="name">
+            {`Output of ${decodeFunctionName(message.name)}`}
+          </div>
 
           <Suspense>
             <Component props={JSON.parse(message.content)} />
@@ -58,23 +59,21 @@ const App = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
+    const socket = new WebSocket("ws://localhost:3001");
 
     socket.addEventListener("open", () => {
       console.log("Connected to Symphony Service");
-
       socket.send(JSON.stringify({ role: "restore", content: "" }));
-
       setIsConnected(true);
     });
 
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(event.data);
-      setMessages((messages) => [...messages, message]);
+      setMessages((messages: Message[]) => [...messages, message]);
     });
 
     socket.addEventListener("close", (event) => {
-      console.log("Service connection closed ", event.code);
+      console.log("Disconnected from Symphony Service", event.code);
       setIsConnected(false);
     });
 
@@ -87,7 +86,7 @@ const App = () => {
     return () => socket.close();
   }, []);
 
-  const messagesRef = useRef();
+  const messagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (messagesRef.current) {
@@ -100,7 +99,7 @@ const App = () => {
 
       return () => observer.disconnect();
     }
-  }, [messagesRef.current]);
+  }, []);
 
   return (
     <div className="page">
@@ -115,7 +114,7 @@ const App = () => {
 
       <div className="conversation">
         <div className="messages" ref={messagesRef}>
-          {messages.map((message, index) => (
+          {messages.map((message: Message, index) => (
             <Message key={index} {...{ message }} />
           ))}
         </div>
@@ -129,15 +128,15 @@ const App = () => {
             if (event.key === "Enter") {
               const message = {
                 role: "user",
-                content: event.target.value,
+                content: (event.target as HTMLInputElement).value,
               };
 
               socketRef.current.send(JSON.stringify(message));
               setMessages((messages) => [...messages, message]);
 
               setTimeout(() => {
-                event.target.value = "";
-              }, [10]);
+                (event.target as HTMLInputElement).value = "";
+              }, 10);
             }
           }}
         />

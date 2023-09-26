@@ -9,23 +9,14 @@ import * as RAR from "fp-ts/ReadonlyArray";
 import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
 import { exec } from "child_process";
+import { decodeFunctionName, encodeFunctionName } from "../utils/functions";
+import { Message } from "../utils/types";
 
 dotenv.config();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-interface FunctionCall {
-  name: string;
-  arguments: string;
-}
-
-interface Message {
-  role: string;
-  content: string;
-  function_call?: FunctionCall;
-}
 
 interface SymphonyEvent extends EventObject {
   type: "CLIENT_MESSAGE";
@@ -63,7 +54,7 @@ const machine = createMachine(
               );
 
               if (O.isSome(functionCall)) {
-                const name = functionCall.value.name.replace("-", ".");
+                const name = decodeFunctionName(functionCall.value.name);
                 const args = JSON.parse(functionCall.value.arguments);
 
                 if (name.includes(".ts")) {
@@ -73,7 +64,7 @@ const machine = createMachine(
 
                       const message = {
                         role: "function",
-                        name: name.replace(".", "-"),
+                        name: encodeFunctionName(name),
                         content: JSON.stringify(result),
                       };
 
@@ -101,7 +92,7 @@ const machine = createMachine(
                       } else {
                         const message = {
                           role: "function",
-                          name: name.replace(".", "-"),
+                          name: encodeFunctionName(name),
                           content: stdout,
                         };
 
@@ -155,6 +146,14 @@ const machine = createMachine(
                   return [...messages, message];
                 },
               }),
+            ],
+          },
+          onError: {
+            target: "idle",
+            actions: [
+              (_, event) => {
+                console.log(event);
+              },
             ],
           },
         },
@@ -245,4 +244,4 @@ wss.on("connection", (connection: WebSocket) => {
   });
 });
 
-server.listen(8080);
+server.listen(3001);
