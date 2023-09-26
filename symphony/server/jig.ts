@@ -12,7 +12,7 @@ function createInterfaces() {
       const { name } = fx;
       const filePath = `./interfaces/${name}.tsx`;
 
-      const source = `import React from "react";
+      const source = `import * as React from "react";
 
       interface Response {}
       
