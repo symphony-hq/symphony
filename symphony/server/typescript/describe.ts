@@ -1,17 +1,8 @@
 import * as ts from "typescript";
 import * as fs from "fs";
+import { Properties } from "../../utils/types";
 
 const FUNCTIONS_DIRECTORY = "./functions";
-
-interface Properties {
-  [key: string]: {
-    type: string;
-    description?: string;
-    items?: {
-      type: string;
-    };
-  };
-}
 
 interface Parameters {
   type: string;

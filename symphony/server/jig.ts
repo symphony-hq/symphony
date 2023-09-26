@@ -4,10 +4,21 @@ import { pipe } from "fp-ts/lib/function";
 import * as RAR from "fp-ts/ReadonlyArray";
 import * as fs from "fs";
 import { Project } from "ts-morph";
+import { Property } from "../utils/types";
 
 const interfaceToProperty = {
   Request: "parameters",
   Response: "returns",
+};
+
+const getTypeFromProperty = (property: Property) => {
+  const { type } = property;
+
+  if (type === "array") {
+    return `${property.items.type}[]`;
+  } else {
+    return type;
+  }
 };
 
 function createInterfaces() {
@@ -59,7 +70,7 @@ function createInterfaces() {
           RAR.map((name) => {
             const property =
               fx[interfaceToProperty[interfaceName]].properties[name];
-            const type = property.type;
+            const type = getTypeFromProperty(property);
 
             return {
               name,

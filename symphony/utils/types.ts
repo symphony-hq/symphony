@@ -10,3 +10,15 @@ export interface Message {
   function_call?: FunctionCall;
   timestamp?: number;
 }
+
+export interface Property {
+  type: string;
+  description?: string;
+  items?: {
+    type: string;
+  };
+}
+
+export interface Properties {
+  [key: string]: Property;
+}
