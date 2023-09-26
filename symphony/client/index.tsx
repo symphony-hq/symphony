@@ -9,20 +9,26 @@ import "./index.scss";
 const interfaceCache = {};
 
 const getInterface = (name: string, type: string) => {
-  if (!interfaceCache[name]) {
-    interfaceCache[name] = React.lazy(async () => {
-      const module = await import(
-        `../../interfaces/${encodeFunctionName(name)}.tsx`
-      );
-      return { default: module[type] };
-    });
+  if (name) {
+    const hash = `${name}-${type}`;
+
+    if (!interfaceCache[hash]) {
+      interfaceCache[hash] = React.lazy(async () => {
+        const module = await import(
+          `../../interfaces/${encodeFunctionName(name)}.tsx`
+        );
+        return { default: module[type] };
+      });
+    }
+    return interfaceCache[hash];
+  } else {
+    return <div />;
   }
-  return interfaceCache[name];
 };
 
 const Message = ({ message }: { message: Message }) => {
   const Interface = getInterface(
-    message.name,
+    message.function_call ? message.function_call.name : message.name,
     message.function_call ? "Request" : "Response"
   );
 
@@ -34,13 +40,10 @@ const Message = ({ message }: { message: Message }) => {
           <div className="name">
             {`Calling ${decodeFunctionName(message.function_call.name)}`}
           </div>
-          <pre className="json">
-            {JSON.stringify(
-              JSON.parse(message.function_call.arguments),
-              null,
-              2
-            )}
-          </pre>
+
+          <Suspense>
+            <Interface props={JSON.parse(message.function_call.arguments)} />
+          </Suspense>
         </div>
       ) : message.role === "function" ? (
         <div className="function">
@@ -97,7 +100,9 @@ const App = () => {
   useEffect(() => {
     if (messagesRef.current) {
       const observer = new MutationObserver(() => {
-        messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+        setTimeout(() => {
+          messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+        }, 25);
       });
 
       const config = { attributes: false, childList: true, subtree: false };
