@@ -1,15 +1,15 @@
-@import "~modularscale-sass/stylesheets/modularscale";
+@import "../node_modules/modularscale-sass/stylesheets/modularscale";
 
 @font-face {
   font-family: "apercu";
-  src: url("../public/fonts/apercu-regular.woff2") format("woff2");
+  src: url("public/fonts/apercu-regular.woff2") format("woff2");
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
   font-family: "apercu mono";
-  src: url("../public/fonts/apercu-mono.woff2") format("woff2");
+  src: url("public/fonts/apercu-mono.woff2") format("woff2");
   font-style: normal;
   font-display: swap;
 }
@@ -126,6 +126,12 @@ body {
           }
         }
 
+        .content,
+        .function,
+        .json {
+          width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
+        }
+
         .content {
           white-space: pre-wrap;
         }
@@ -139,7 +145,6 @@ body {
           font-family: "apercu mono", monospace;
           font-size: ms(-1);
           color: $neutral-500;
-          width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
           overflow-x: scroll;
         }
       }

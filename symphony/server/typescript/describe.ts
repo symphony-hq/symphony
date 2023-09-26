@@ -1,12 +1,22 @@
 import * as ts from "typescript";
 import * as fs from "fs";
+import { Properties } from "../../utils/types";
 
 const FUNCTIONS_DIRECTORY = "./functions";
+
+interface Parameters {
+  type: string;
+  properties: Properties;
+  required: string[];
+}
+
+type Returns = Parameters;
 
 interface Schema {
   name: string;
   description: string;
-  parameters: any;
+  parameters: Parameters;
+  returns: Returns;
 }
 
 function getSchema(propertyType) {
@@ -22,7 +32,7 @@ function getSchema(propertyType) {
 }
 
 function extractParameters(node: ts.InterfaceDeclaration) {
-  let parameters: any = {
+  const parameters: Parameters = {
     type: "object",
     properties: {},
     required: [],
@@ -59,16 +69,27 @@ function extractParameters(node: ts.InterfaceDeclaration) {
 }
 
 function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
-  let schema: Schema = {
+  const schema: Schema = {
     name: "",
     description: "",
-    parameters: {},
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+    returns: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
   };
 
   ts.forEachChild(sourceFile, (node) => {
     if (ts.isInterfaceDeclaration(node)) {
       if (node.name.text === "SymphonyRequest") {
         schema.parameters = extractParameters(node);
+      } else if (node.name.text === "SymphonyResponse") {
+        schema.returns = extractParameters(node);
       }
     }
 
@@ -91,7 +112,7 @@ function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
 }
 
 const readFiles = new Promise((resolve, reject) => {
-  let metadatas = [] as any;
+  const schemas = [] as Schema[];
 
   fs.readdir(FUNCTIONS_DIRECTORY, (error, files) => {
     if (error) {
@@ -113,18 +134,18 @@ const readFiles = new Promise((resolve, reject) => {
           true
         );
 
-        const metadata = generateSchema(sourceFile, fileName);
-        metadatas.push(metadata);
+        const schema = generateSchema(sourceFile, fileName);
+        schemas.push(schema);
       });
 
-    resolve(metadatas);
+    resolve(schemas);
   });
 });
 
 readFiles
   .then((metadatas) => {
     fs.writeFileSync(
-      "./server/typescript/descriptions.json",
+      "./symphony/server/typescript/descriptions.json",
       JSON.stringify(metadatas, null, 2)
     );
   })

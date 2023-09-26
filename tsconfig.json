@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "noEmitOnError": false,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "jsx": "react"
   }
 }

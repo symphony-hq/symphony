@@ -1,0 +1,35 @@
+[
+    {
+        "name": "getCoordinates-py",
+        "description": "Get latitude and longitude from IP address",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "ipAddress": {
+                    "description": "The IP address; Use 'me' to get own IP address",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "ipAddress"
+            ]
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "lat": {
+                    "description": "The latitude of IP address",
+                    "type": "number"
+                },
+                "lng": {
+                    "description": "The longitude of IP address",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "lat",
+                "lng"
+            ]
+        }
+    }
+]

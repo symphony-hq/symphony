@@ -1,4 +1,4 @@
-import { Server } from "ws";
+import { Server, WebSocket } from "ws";
 import { createServer } from "http";
 import { createMachine, interpret, EventObject, assign } from "xstate";
 import OpenAI from "openai";
@@ -9,23 +9,14 @@ import * as RAR from "fp-ts/ReadonlyArray";
 import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
 import { exec } from "child_process";
+import { decodeFunctionName, encodeFunctionName } from "../utils/functions";
+import { Message } from "../utils/types";
 
 dotenv.config();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-interface FunctionCall {
-  name: string;
-  arguments: string;
-}
-
-interface Message {
-  role: string;
-  content: string;
-  function_call?: FunctionCall;
-}
 
 interface SymphonyEvent extends EventObject {
   type: "CLIENT_MESSAGE";
@@ -48,6 +39,27 @@ const machine = createMachine(
       ],
     },
     predictableActionArguments: true,
+    on: {
+      CLIENT_MESSAGE: [
+        {
+          target: "gpt4",
+          cond: (_, event) => event.data.role === "user",
+          actions: [
+            assign({
+              messages: (context, event) => {
+                const { messages } = context;
+                const { data } = event as SymphonyEvent;
+                return [...messages, data];
+              },
+            }),
+          ],
+        },
+        {
+          target: "restore",
+          cond: (_, event) => event.data.role === "restore",
+        },
+      ],
+    },
     states: {
       function: {
         invoke: {
@@ -63,25 +75,34 @@ const machine = createMachine(
               );
 
               if (O.isSome(functionCall)) {
-                const name = functionCall.value.name.replace("-", ".");
+                const name = decodeFunctionName(functionCall.value.name);
                 const args = JSON.parse(functionCall.value.arguments);
 
                 if (name.includes(".ts")) {
-                  import(`../functions/${name}`)
+                  import(`../../functions/${name}`)
                     .then(async (module) => {
                       const result = await module.default(args);
 
                       const message = {
                         role: "function",
-                        name: name.replace(".", "-"),
+                        name: encodeFunctionName(name),
                         content: JSON.stringify(result),
                       };
 
                       resolve(message);
                     })
-                    .catch((err) => {
-                      console.error(`Failed to load function ${name}:`, err);
-                      resolve(null);
+                    .catch((error) => {
+                      console.error(`Failed to load function ${name}:`, error);
+
+                      const message = {
+                        role: "function",
+                        name: encodeFunctionName(name),
+                        content: JSON.stringify({
+                          errorMessage: error.message,
+                        }),
+                      };
+
+                      resolve(message);
                     });
                 } else if (name.includes(".py")) {
                   const pythonInterpreterPath = "venv/bin/python3";
@@ -97,11 +118,19 @@ const machine = createMachine(
                           error
                         );
 
-                        resolve(null);
+                        const message = {
+                          role: "function",
+                          name: encodeFunctionName(name),
+                          content: JSON.stringify({
+                            errorMessage: error.message,
+                          }),
+                        };
+
+                        resolve(message);
                       } else {
                         const message = {
                           role: "function",
-                          name: name.replace(".", "-"),
+                          name: encodeFunctionName(name),
                           content: stdout,
                         };
 
@@ -118,7 +147,17 @@ const machine = createMachine(
             {
               target: "gpt4",
               cond: (_, event) => event.data,
-              actions: ["sendFunctionMessageToClients"],
+              actions: [
+                "sendFunctionMessageToClients",
+                assign({
+                  messages: (context, event) => {
+                    const { messages } = context;
+                    const { data: message } = event;
+
+                    return [...messages, message];
+                  },
+                }),
+              ],
             },
             {
               target: "idle",
@@ -147,24 +186,29 @@ const machine = createMachine(
               }),
             ],
           },
-        },
-      },
-      idle: {
-        on: {
-          CLIENT_MESSAGE: {
-            target: "gpt4",
+          onError: {
+            target: "idle",
             actions: [
-              assign({
-                messages: (context, event) => {
-                  const { messages } = context;
-                  const { data } = event as SymphonyEvent;
-                  return [...messages, data];
-                },
-              }),
+              (_, event) => {
+                console.log(event);
+              },
             ],
           },
         },
       },
+      restore: {
+        invoke: {
+          src: () =>
+            new Promise((resolve) => {
+              resolve({});
+            }),
+          onDone: {
+            target: "idle",
+            actions: ["sendAllMessagesToClients"],
+          },
+        },
+      },
+      idle: {},
     },
   },
   {
@@ -172,15 +216,26 @@ const machine = createMachine(
       sendAssistantMessageToClients: (_, event) => {
         const { message } = event.data.choices[0];
 
-        wss.clients.forEach((client) => {
+        wss.clients.forEach((client: WebSocket) => {
           client.send(JSON.stringify(message));
         });
       },
       sendFunctionMessageToClients: (_, event) => {
         const { data: message } = event;
 
-        wss.clients.forEach((client) => {
+        wss.clients.forEach((client: WebSocket) => {
           client.send(JSON.stringify(message));
+        });
+      },
+      sendAllMessagesToClients: (context) => {
+        const { messages } = context;
+
+        wss.clients.forEach((client: WebSocket) => {
+          messages
+            .filter((message) => message.role !== "system")
+            .map((message) => {
+              client.send(JSON.stringify(message));
+            });
         });
       },
     },
@@ -189,8 +244,10 @@ const machine = createMachine(
 
 const service = interpret(machine).start();
 
-wss.on("connection", (connection) => {
-  connection.on("message", (message) => {
+type Data = string | Buffer | ArrayBuffer | Buffer[] | ArrayBufferView;
+
+wss.on("connection", (connection: WebSocket) => {
+  connection.on("message", (message: Data) => {
     const decodedMessage = message.toString();
     const parsedMessage = JSON.parse(decodedMessage);
 
@@ -203,4 +260,4 @@ wss.on("connection", (connection) => {
   });
 });
 
-server.listen(8080);
+server.listen(3001);

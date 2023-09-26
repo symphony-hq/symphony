@@ -6,7 +6,7 @@ interface SymphonyRequest {
 }
 
 /**
- * temperature: Value in Celsius
+ * value: Value in Celsius
  */
 interface SymphonyResponse {
   value: number;
