@@ -1,11 +1,17 @@
 import * as React from "react";
 
+interface Request {
+  ipAddress: string;
+}
+export function Request({ props }: { props: Request }) {
+  return <pre className="json">{JSON.stringify(props, null, 2)}</pre>;
+}
+
 interface Response {
   lat: number;
   lng: number;
 }
-
-export default function Component({ props }: { props: Response }) {
+export function Response({ props }: { props: Response }) {
   const { lat, lng } = props;
 
   return (

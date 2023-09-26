@@ -6,19 +6,25 @@ import { encodeFunctionName, decodeFunctionName } from "../utils/functions";
 import { Message } from "../utils/types";
 import "./index.scss";
 
-const componentCache = {};
+const interfaceCache = {};
 
-const getComponent = (name: string) => {
-  if (!componentCache[name]) {
-    componentCache[name] = React.lazy(
-      () => import(`../../interfaces/${encodeFunctionName(name)}.tsx`)
-    );
+const getInterface = (name: string, type: string) => {
+  if (!interfaceCache[name]) {
+    interfaceCache[name] = React.lazy(async () => {
+      const module = await import(
+        `../../interfaces/${encodeFunctionName(name)}.tsx`
+      );
+      return { default: module[type] };
+    });
   }
-  return componentCache[name];
+  return interfaceCache[name];
 };
 
 const Message = ({ message }: { message: Message }) => {
-  const Component = getComponent(message.name);
+  const Interface = getInterface(
+    message.name,
+    message.function_call ? "Request" : "Response"
+  );
 
   return (
     <div className="message">
@@ -43,7 +49,7 @@ const Message = ({ message }: { message: Message }) => {
           </div>
 
           <Suspense>
-            <Component props={JSON.parse(message.content)} />
+            <Interface props={JSON.parse(message.content)} />
           </Suspense>
         </div>
       ) : (
