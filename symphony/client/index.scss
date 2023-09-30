@@ -1,4 +1,5 @@
 @import "../node_modules/modularscale-sass/stylesheets/modularscale";
+@import "colors.scss";
 
 @font-face {
   font-family: "apercu";
@@ -14,20 +15,6 @@
   font-display: swap;
 }
 
-$red: #eb5528;
-$orange: #ed7e30;
-$green: #9aee86;
-$neutral-50: #fafafa;
-$neutral-100: #f5f5f5;
-$neutral-200: #e5e5e5;
-$neutral-300: #d4d4d4;
-$neutral-400: #a3a3a3;
-$neutral-500: #737373;
-$neutral-600: #525252;
-$neutral-700: #404040;
-$neutral-800: #262626;
-$neutral-900: #171717;
-
 $modularscale: (
   base: 16px,
   ratio: 1.25
@@ -41,133 +28,207 @@ body {
   font-family: "apercu", sans-serif;
 }
 
-.page {
-  height: 100dvh;
-  width: 100vw;
+.window {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  width: 100vw;
+  height: 100dvh;
 
-  .navigation {
+  .page {
+    height: 100%;
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: ms(0);
-    background: $neutral-50;
+    flex-direction: column;
+    flex-grow: 1;
 
-    .name {
-      font-size: ms(-1);
-      color: $neutral-500;
-    }
-
-    .status {
-      width: ms(-2);
-      height: ms(-2);
-      background: $red;
-      border-radius: 50%;
-      transition: background 0.2s ease-in-out;
-      position: relative;
+    .navigation {
       display: flex;
       flex-direction: row;
+      justify-content: space-between;
       align-items: center;
+      padding: ms(0);
+      background: $neutral-50;
 
-      &.connected {
-        background: $green;
-      }
-
-      .tooltip {
-        display: none;
-        position: absolute;
+      .name {
         font-size: ms(-1);
-        background: $neutral-800;
-        right: ms(2);
-        padding: ms(-6) ms(-4);
-        color: $neutral-50;
-        border-radius: ms(-6);
+        color: $neutral-500;
       }
 
-      &:hover {
-        .tooltip {
-          display: block;
+      .menu {
+        display: flex;
+        color: $neutral-400;
+      }
+    }
+
+    .conversation {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      height: calc(100vh - 48.5px - 75.47px - #{ms(0)});
+      padding-top: ms(0);
+      padding-left: ms(0);
+      padding-right: ms(0);
+
+      .messages {
+        display: flex;
+        flex-direction: column;
+        gap: ms(-2);
+        overflow-y: scroll;
+
+        .message {
+          display: flex;
+          flex-direction: row;
+          gap: ms(-4);
+
+          .avatar {
+            flex-shrink: 0;
+            height: 21px;
+            width: 21px;
+            background: $neutral-300;
+            border-radius: ms(-8);
+
+            &.user {
+              background: $red;
+            }
+          }
+
+          .content,
+          .function,
+          .json {
+            width: 100%;
+          }
+
+          .content {
+            white-space: pre-wrap;
+          }
+
+          .function {
+            border-radius: ms(-8);
+          }
+
+          .json {
+            margin: 0;
+            font-family: "apercu mono", monospace;
+            font-size: ms(-1);
+            color: $neutral-500;
+            overflow-x: scroll;
+          }
+
+          .error {
+            color: $red-500;
+            font-size: ms(-1);
+          }
         }
+      }
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: row;
+      gap: ms(0);
+      padding: ms(0);
+
+      .input {
+        flex-grow: 1;
+        padding: ms(-2);
+        font-size: ms(0);
+        border: 1px solid $neutral-300;
+        border-radius: ms(-4);
+        outline: none;
+      }
+
+      .send {
+        font-size: ms(0);
       }
     }
   }
 
-  .conversation {
-    display: flex;
+  .history {
+    display: none;
+    background: $neutral-900;
+    height: calc(100dvh);
     flex-direction: column;
-    justify-content: flex-end;
-    height: calc(100vh - 48.5px - 75.47px - #{ms(0)});
-    padding-top: ms(0);
-    padding-left: ms(0);
-    padding-right: ms(0);
+    overflow-y: scroll;
+    flex-shrink: 0;
+    width: ms(13);
 
-    .messages {
+    &.visible {
       display: flex;
-      flex-direction: column;
-      gap: ms(-2);
-      overflow-y: scroll;
+    }
 
-      .message {
+    .bar {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: ms(0);
+      background: $neutral-800;
+      color: $neutral-300;
+      font-size: ms(-1);
+      position: sticky;
+      top: 0;
+
+      .status {
+        width: ms(-2);
+        height: ms(-2);
+        background: $red;
+        border-radius: 50%;
+        transition: background 0.2s ease-in-out;
+        position: relative;
         display: flex;
         flex-direction: row;
-        gap: ms(-4);
+        align-items: center;
 
-        .avatar {
-          flex-shrink: 0;
-          height: 21px;
-          width: 21px;
-          background: $neutral-300;
-          border-radius: ms(-8);
-
-          &.user {
-            background: $red;
-          }
+        &.connected {
+          background: $green;
         }
 
-        .content,
-        .function,
-        .json {
-          width: calc(100vw - #{ms(0) * 2} - 21px - #{ms(-4)});
+        .tooltip {
+          display: none;
+          position: absolute;
+          font-size: ms(-1);
+          background: $neutral-600;
+          right: ms(2);
+          padding: ms(-6) ms(-4);
+          color: $neutral-50;
+          border-radius: ms(-6);
+        }
+
+        &:hover {
+          .tooltip {
+            display: block;
+          }
+        }
+      }
+    }
+
+    .conversations {
+      padding: ms(-2);
+
+      .line {
+        margin: ms(-4);
+        height: 1px;
+        width: calc(100% - #{ms(-4) * 2});
+        background: $neutral-700;
+      }
+
+      .conversation {
+        cursor: pointer;
+        padding: ms(-4);
+        border-radius: ms(-6);
+
+        .timestamp {
+          font-size: ms(-1);
+          color: $neutral-400;
         }
 
         .content {
-          white-space: pre-wrap;
+          color: $neutral-200;
         }
 
-        .function {
-          border-radius: ms(-8);
-        }
-
-        .json {
-          margin: 0;
-          font-family: "apercu mono", monospace;
-          font-size: ms(-1);
-          color: $neutral-500;
-          overflow-x: scroll;
+        &:hover {
+          background: $neutral-800;
         }
       }
     }
-  }
-}
-
-.controls {
-  display: flex;
-  flex-direction: row;
-  gap: ms(0);
-  padding: ms(0);
-
-  .input {
-    flex-grow: 1;
-    padding: ms(-2);
-    font-size: ms(0);
-    border: 1px solid $neutral-300;
-    border-radius: ms(-4);
-    outline: none;
-  }
-
-  .send {
-    font-size: ms(0);
   }
 }

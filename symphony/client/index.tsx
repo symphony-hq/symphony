@@ -5,6 +5,8 @@ import * as cx from "classnames";
 import { encodeFunctionName, decodeFunctionName } from "../utils/functions";
 import { Message } from "../utils/types";
 import "./index.scss";
+import { parseISO, format } from "date-fns";
+import { XIcon, ThreeBarsIcon } from "@primer/octicons-react";
 
 const interfaceCache = {};
 
@@ -35,6 +37,7 @@ const Message = ({ message }: { message: Message }) => {
   return (
     <div className="message">
       <div className={cx("avatar", { user: message.role === "user" })} />
+
       {message.function_call ? (
         <div className="function">
           <div className="name">
@@ -42,7 +45,9 @@ const Message = ({ message }: { message: Message }) => {
           </div>
 
           <Suspense>
-            <Interface props={JSON.parse(message.function_call.arguments)} />
+            <ErrorBoundary>
+              <Interface props={JSON.parse(message.function_call.arguments)} />
+            </ErrorBoundary>
           </Suspense>
         </div>
       ) : message.role === "function" ? (
@@ -52,7 +57,9 @@ const Message = ({ message }: { message: Message }) => {
           </div>
 
           <Suspense>
-            <Interface props={JSON.parse(message.content)} />
+            <ErrorBoundary>
+              <Interface props={JSON.parse(message.content)} />
+            </ErrorBoundary>
           </Suspense>
         </div>
       ) : (
@@ -66,6 +73,8 @@ const App = () => {
   const socketRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [isHistoryVisible, setIsHistoryVisible] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3001");
@@ -78,7 +87,12 @@ const App = () => {
 
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(event.data);
-      setMessages((messages: Message[]) => [...messages, message]);
+
+      if (message.role === "history") {
+        setConversations(message.content);
+      } else {
+        setMessages((messages: Message[]) => [...messages, message]);
+      }
     });
 
     socket.addEventListener("close", (event) => {
@@ -113,48 +127,130 @@ const App = () => {
   }, []);
 
   return (
-    <div className="page">
-      <div className="navigation">
-        <div className="name">Symphony</div>
-        <div className={cx("status", { connected: isConnected })}>
-          <div className="tooltip">
-            {isConnected ? "Connected" : "Disconnected"}
+    <div className="window">
+      <div className="page">
+        <div className="navigation">
+          <div className="name">Symphony</div>
+          <div
+            className="menu"
+            onClick={() => {
+              setIsHistoryVisible(!isHistoryVisible);
+              socketRef.current.send(
+                JSON.stringify({
+                  role: "history",
+                  content: "",
+                })
+              );
+            }}
+          >
+            {isHistoryVisible ? <XIcon /> : <ThreeBarsIcon />}
           </div>
         </div>
-      </div>
 
-      <div className="conversation">
-        <div className="messages" ref={messagesRef}>
-          {messages.map((message: Message, index) => (
-            <Message key={index} {...{ message }} />
-          ))}
+        <div className="conversation">
+          <div className="messages" ref={messagesRef}>
+            {messages.map((message: Message, index) => (
+              <Message key={index} {...{ message }} />
+            ))}
+          </div>
+        </div>
+
+        <div className="controls">
+          <input
+            className="input"
+            placeholder="Send a message"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                const message = {
+                  role: "user",
+                  content: (event.target as HTMLInputElement).value,
+                };
+
+                socketRef.current.send(JSON.stringify(message));
+                setMessages((messages) => [...messages, message]);
+
+                setTimeout(() => {
+                  (event.target as HTMLInputElement).value = "";
+                }, 10);
+              }
+            }}
+          />
         </div>
       </div>
 
-      <div className="controls">
-        <input
-          className="input"
-          placeholder="Send a message"
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              const message = {
-                role: "user",
-                content: (event.target as HTMLInputElement).value,
-              };
+      <div className={cx("history", { visible: isHistoryVisible })}>
+        <div className="bar">
+          <div className="name">History</div>
+          <div className={cx("status", { connected: isConnected })}>
+            <div className="tooltip">
+              {isConnected ? "Connected" : "Disconnected"}
+            </div>
+          </div>
+        </div>
 
-              socketRef.current.send(JSON.stringify(message));
-              setMessages((messages) => [...messages, message]);
+        <div className="conversations">
+          <div
+            className="conversation"
+            onClick={() => {
+              setMessages([]);
+              socketRef.current.send(
+                JSON.stringify({
+                  role: "new",
+                  content: "",
+                })
+              );
+            }}
+          >
+            <div className="timestamp">Now</div>
+            <div className="content">Start a new conversation!</div>
+          </div>
 
-              setTimeout(() => {
-                (event.target as HTMLInputElement).value = "";
-              }, 10);
-            }
-          }}
-        />
+          <div className="line" />
+
+          {conversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              className="conversation"
+              onClick={() => {
+                setMessages([]);
+                socketRef.current.send(
+                  JSON.stringify({
+                    role: "switch",
+                    content: conversation.id,
+                  })
+                );
+              }}
+            >
+              <div className="timestamp">
+                {format(
+                  parseISO(conversation.timestamp),
+                  "dd MMM yyyy, hh:mmaa"
+                )}
+              </div>
+              <div className="content">{conversation.message.content}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }> {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="error">{this.state.error.toString()}</div>;
+    } else {
+      return this.props.children;
+    }
+  }
+}
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);

@@ -10,9 +10,14 @@ import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
 import { exec } from "child_process";
 import { decodeFunctionName, encodeFunctionName } from "../utils/functions";
-import { Message } from "../utils/types";
+import { Generation, Message } from "../utils/types";
+import { v4 as id } from "uuid";
+import * as S from "fp-ts/string";
+import axios from "axios";
 
 dotenv.config();
+
+const DATABASE_ENDPOINT = "http://127.0.0.1:3002";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -31,12 +36,19 @@ const machine = createMachine(
     id: "machine",
     initial: "idle",
     context: {
+      id: id(),
       messages: [
         {
           role: "system",
-          content: "You are a friendly assistant. Keep your responses short.",
+          content: `You are a friendly assistant. Keep your responses short.`,
         },
       ],
+    },
+    schema: {
+      context: {} as {
+        id: string;
+        messages: Message[];
+      },
     },
     predictableActionArguments: true,
     on: {
@@ -52,11 +64,33 @@ const machine = createMachine(
                 return [...messages, data];
               },
             }),
+            "receiveUserMessageFromClient",
           ],
         },
         {
           target: "restore",
           cond: (_, event) => event.data.role === "restore",
+        },
+        {
+          target: "history",
+          cond: (_, event) => event.data.role === "history",
+        },
+        {
+          target: "new",
+          cond: (_, event) => event.data.role === "new",
+        },
+        {
+          target: "switch",
+          cond: (_, event) => event.data.role === "switch",
+          actions: [
+            assign({
+              id: (_, event) => {
+                const { data } = event as SymphonyEvent;
+                const { content: conversationId } = data;
+                return conversationId;
+              },
+            }),
+          ],
         },
       ],
     },
@@ -196,15 +230,110 @@ const machine = createMachine(
           },
         },
       },
+      new: {
+        invoke: {
+          src: () => Promise.resolve({}),
+          onDone: {
+            target: "idle",
+            actions: [
+              assign({
+                id: id(),
+                messages: [],
+              }),
+            ],
+          },
+        },
+      },
       restore: {
         invoke: {
-          src: () =>
-            new Promise((resolve) => {
-              resolve({});
-            }),
+          src: () => Promise.resolve({}),
           onDone: {
             target: "idle",
             actions: ["sendAllMessagesToClients"],
+          },
+        },
+      },
+      switch: {
+        invoke: {
+          src: async (context) => {
+            const { id } = context;
+
+            const { data: generations } = await axios.get(
+              `${DATABASE_ENDPOINT}/generations?conversationId=eq.${id}&order=timestamp`
+            );
+
+            return pipe(
+              generations,
+              RAR.filter(
+                (generation: Generation) => generation.conversationId === id
+              ),
+              RAR.map((generation: Generation) => generation.message)
+            );
+          },
+          onDone: {
+            target: "idle",
+            actions: [
+              assign({
+                messages: (_, event) => {
+                  const { data: messages } = event;
+                  return messages;
+                },
+              }),
+              "sendAllMessagesToClients",
+            ],
+          },
+        },
+      },
+      history: {
+        invoke: {
+          src: async () => {
+            const { data: generations } = await axios.get(
+              `${DATABASE_ENDPOINT}/generations?order=timestamp`
+            );
+
+            return generations;
+          },
+          onDone: {
+            target: "idle",
+            actions: [
+              (_, event) => {
+                const { data: generations } = event;
+
+                const history = pipe(
+                  generations,
+                  RAR.map(
+                    (generation: Generation) => generation.conversationId
+                  ),
+                  RAR.uniq(S.Eq),
+                  RAR.map((conversationId) =>
+                    pipe(
+                      generations,
+                      RAR.filter(
+                        (generation: Generation) =>
+                          generation.conversationId === conversationId
+                      ),
+                      RAR.head,
+                      O.map(({ conversationId, message, timestamp }) => ({
+                        id: conversationId,
+                        timestamp,
+                        message,
+                      })),
+                      O.toUndefined
+                    )
+                  ),
+                  RAR.reverse
+                );
+
+                wss.clients.forEach((client: WebSocket) => {
+                  client.send(
+                    JSON.stringify({
+                      role: "history",
+                      content: history,
+                    })
+                  );
+                });
+              },
+            ],
           },
         },
       },
@@ -213,18 +342,39 @@ const machine = createMachine(
   },
   {
     actions: {
-      sendAssistantMessageToClients: (_, event) => {
+      receiveUserMessageFromClient: async (context, event) => {
+        const { id } = context;
+        const { data: message } = event;
+
+        await axios.post(`${DATABASE_ENDPOINT}/generations`, {
+          message: message,
+          conversationId: id,
+        });
+      },
+      sendAssistantMessageToClients: async (context, event) => {
+        const { id } = context;
         const { message } = event.data.choices[0];
 
         wss.clients.forEach((client: WebSocket) => {
           client.send(JSON.stringify(message));
         });
+
+        await axios.post(`${DATABASE_ENDPOINT}/generations`, {
+          message: message,
+          conversationId: id,
+        });
       },
-      sendFunctionMessageToClients: (_, event) => {
+      sendFunctionMessageToClients: async (context, event) => {
+        const { id } = context;
         const { data: message } = event;
 
         wss.clients.forEach((client: WebSocket) => {
           client.send(JSON.stringify(message));
+        });
+
+        await axios.post(`${DATABASE_ENDPOINT}/generations`, {
+          message: message,
+          conversationId: id,
         });
       },
       sendAllMessagesToClients: (context) => {
