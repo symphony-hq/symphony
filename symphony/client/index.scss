@@ -56,6 +56,11 @@ body {
       .menu {
         display: flex;
         color: $neutral-400;
+        cursor: pointer;
+
+        &:hover {
+          color: $neutral-500;
+        }
       }
     }
 
