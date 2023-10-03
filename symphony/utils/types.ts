@@ -1,3 +1,5 @@
+import { UUID } from "crypto";
+
 export interface FunctionCall {
   name: string;
   arguments: string;
@@ -8,7 +10,14 @@ export interface Message {
   content: string;
   name?: string;
   function_call?: FunctionCall;
-  timestamp?: number;
+  timestamp?: string;
+}
+
+export interface Generation {
+  id: UUID;
+  conversationId: UUID;
+  timestamp: string;
+  message: Message;
 }
 
 export interface Property {
