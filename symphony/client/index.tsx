@@ -3,10 +3,10 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import * as ReactDOM from "react-dom/client";
 import * as cx from "classnames";
 import { encodeFunctionName, decodeFunctionName } from "../utils/functions";
-import { Message } from "../utils/types";
+import { Generation } from "../utils/types";
 import "./index.scss";
 import { parseISO, format } from "date-fns";
-import { XIcon, ThreeBarsIcon } from "@primer/octicons-react";
+import { XIcon, ThreeBarsIcon, TrashIcon } from "@primer/octicons-react";
 
 const interfaceCache = {};
 
@@ -28,17 +28,101 @@ const getInterface = (name: string, type: string) => {
   }
 };
 
-const Message = ({ message }: { message: Message }) => {
+const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
+  const [content, setContent] = useState(generation.message.content);
+
+  const textAreaRef = useRef(null);
+
+  useEffect(() => {
+    textAreaRef.current.style.height = "inherit";
+    const scrollHeight = textAreaRef.current.scrollHeight;
+    textAreaRef.current.style.height = scrollHeight + "px";
+
+    // Set cursor to the end of the content
+    const length = textAreaRef.current.value.length;
+    textAreaRef.current.setSelectionRange(length, length);
+  }, []);
+
+  return (
+    <div className="editing">
+      <textarea
+        className={cx("input", {
+          function:
+            generation.message.function_call ||
+            generation.message.role === "function",
+        })}
+        value={content}
+        onChange={(event) => {
+          setContent(event.target.value);
+        }}
+        ref={textAreaRef}
+        autoFocus={true}
+      />
+
+      <div className="actions">
+        <div
+          className="discard"
+          onClick={() => {
+            setIsEditing(false);
+          }}
+        >
+          Discard Changes
+        </div>
+        <div
+          className="save"
+          onClick={() => {
+            setIsEditing(false);
+
+            const updatedMessage = {
+              ...generation.message,
+              content,
+            };
+
+            socketRef.current.send(
+              JSON.stringify({
+                role: "edit",
+                content: {
+                  id: generation.id,
+                  message: updatedMessage,
+                },
+              })
+            );
+          }}
+        >
+          Save Changes
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Generation = ({
+  generation,
+  socketRef,
+}: {
+  generation: Generation;
+  socketRef: React.RefObject<WebSocket>;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const { message } = generation;
+
   const Interface = getInterface(
     message.function_call ? message.function_call.name : message.name,
     message.function_call ? "Request" : "Response"
   );
 
   return (
-    <div className="message">
+    <div
+      className={cx("message", { editing: isEditing })}
+      onClick={() => {
+        if (!isEditing) setIsEditing(true);
+      }}
+    >
       <div className={cx("avatar", { user: message.role === "user" })} />
 
-      {message.function_call ? (
+      {isEditing ? (
+        <EditGeneration {...{ generation, setIsEditing, socketRef }} />
+      ) : message.function_call ? (
         <div className="function">
           <div className="name">
             {`Calling ${decodeFunctionName(message.function_call.name)}`}
@@ -71,7 +155,7 @@ const Message = ({ message }: { message: Message }) => {
 
 const App = () => {
   const socketRef = useRef(null);
-  const [messages, setMessages] = useState([]);
+  const [generations, setGenerations] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
@@ -90,8 +174,33 @@ const App = () => {
 
       if (message.role === "history") {
         setConversations(message.content);
+      } else if (message.role === "switch") {
+        const { content: generations } = message;
+        setGenerations(generations);
+      } else if (message.role === "edit") {
+        const { content: updatedGeneration } = message;
+        setGenerations((generations: Generation[]) =>
+          generations.map((generation) => {
+            if (generation.id === updatedGeneration.id) {
+              return updatedGeneration;
+            } else {
+              return generation;
+            }
+          })
+        );
+      } else if (message.role === "delete") {
+        const { content: deletedGeneration } = message;
+        setConversations((conversations) =>
+          conversations.filter(
+            (conversation) =>
+              conversation.id !== deletedGeneration.conversationId
+          )
+        );
       } else {
-        setMessages((messages: Message[]) => [...messages, message]);
+        setGenerations((generations: Generation[]) => [
+          ...generations,
+          message,
+        ]);
       }
     });
 
@@ -149,8 +258,8 @@ const App = () => {
 
         <div className="conversation">
           <div className="messages" ref={messagesRef}>
-            {messages.map((message: Message, index) => (
-              <Message key={index} {...{ message }} />
+            {generations.map((generation: Generation) => (
+              <Generation key={generation.id} {...{ generation, socketRef }} />
             ))}
           </div>
         </div>
@@ -167,7 +276,6 @@ const App = () => {
                 };
 
                 socketRef.current.send(JSON.stringify(message));
-                setMessages((messages) => [...messages, message]);
 
                 setTimeout(() => {
                   (event.target as HTMLInputElement).value = "";
@@ -192,7 +300,7 @@ const App = () => {
           <div
             className="conversation"
             onClick={() => {
-              setMessages([]);
+              setGenerations([]);
               socketRef.current.send(
                 JSON.stringify({
                   role: "new",
@@ -201,7 +309,9 @@ const App = () => {
               );
             }}
           >
-            <div className="timestamp">Now</div>
+            <div className="top">
+              <div className="timestamp">Now</div>
+            </div>
             <div className="content">Start a new conversation!</div>
           </div>
 
@@ -210,9 +320,12 @@ const App = () => {
           {conversations.map((conversation) => (
             <div
               key={conversation.id}
-              className="conversation"
+              className={cx("conversation", {
+                selected: generations
+                  .map((generation) => generation.conversationId)
+                  .includes(conversation.id),
+              })}
               onClick={() => {
-                setMessages([]);
                 socketRef.current.send(
                   JSON.stringify({
                     role: "switch",
@@ -221,10 +334,30 @@ const App = () => {
                 );
               }}
             >
-              <div className="timestamp">
-                {format(
-                  parseISO(conversation.timestamp),
-                  "dd MMM yyyy, hh:mmaa"
+              <div className="top">
+                <div className="timestamp">
+                  {format(
+                    parseISO(conversation.timestamp),
+                    "dd MMM yyyy, hh:mmaa"
+                  )}
+                </div>
+
+                {generations
+                  .map((generation) => generation.conversationId)
+                  .includes(conversation.id) && (
+                  <div
+                    className="delete"
+                    onClick={() => {
+                      socketRef.current.send(
+                        JSON.stringify({
+                          role: "delete",
+                          content: conversation.id,
+                        })
+                      );
+                    }}
+                  >
+                    <TrashIcon size={14} />
+                  </div>
                 )}
               </div>
               <div className="content">{conversation.message.content}</div>

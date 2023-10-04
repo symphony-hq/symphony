@@ -10,7 +10,6 @@ export interface Message {
   content: string;
   name?: string;
   function_call?: FunctionCall;
-  timestamp?: string;
 }
 
 export interface Generation {

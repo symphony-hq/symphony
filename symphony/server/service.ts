@@ -1,11 +1,11 @@
 import { Server, WebSocket } from "ws";
 import { createServer } from "http";
-import { createMachine, interpret, EventObject, assign } from "xstate";
+import { createMachine, interpret, EventObject } from "xstate";
+import { assign } from "@xstate/immer";
 import OpenAI from "openai";
 import * as typescriptFunctions from "./typescript/descriptions.json";
 import * as pythonFunctions from "./python/descriptions.json";
 import { pipe } from "fp-ts/lib/function";
-import * as RAR from "fp-ts/ReadonlyArray";
 import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
 import { exec } from "child_process";
@@ -14,6 +14,8 @@ import { Generation, Message } from "../utils/types";
 import { v4 as id } from "uuid";
 import * as S from "fp-ts/string";
 import axios from "axios";
+import * as AR from "fp-ts/Array";
+import { UUID } from "crypto";
 
 dotenv.config();
 
@@ -31,23 +33,30 @@ interface SymphonyEvent extends EventObject {
 const server = createServer();
 const wss = new Server({ server });
 
+const createGeneration = (
+  message: Message,
+  conversationId: UUID
+): Generation => {
+  return {
+    id: id(),
+    message,
+    conversationId,
+    timestamp: new Date().toISOString(),
+  };
+};
+
 const machine = createMachine(
   {
     id: "machine",
     initial: "idle",
     context: {
       id: id(),
-      messages: [
-        {
-          role: "system",
-          content: `You are a friendly assistant. Keep your responses short.`,
-        },
-      ],
+      generations: [],
     },
     schema: {
       context: {} as {
-        id: string;
-        messages: Message[];
+        id: UUID;
+        generations: Generation[];
       },
     },
     predictableActionArguments: true,
@@ -57,12 +66,14 @@ const machine = createMachine(
           target: "gpt4",
           cond: (_, event) => event.data.role === "user",
           actions: [
-            assign({
-              messages: (context, event) => {
-                const { messages } = context;
-                const { data } = event as SymphonyEvent;
-                return [...messages, data];
-              },
+            assign((context, event) => {
+              const { generations, id } = context;
+              const { data } = event as SymphonyEvent;
+
+              context.generations = [
+                ...generations,
+                createGeneration(data, id),
+              ];
             }),
             "receiveUserMessageFromClient",
           ],
@@ -80,15 +91,21 @@ const machine = createMachine(
           cond: (_, event) => event.data.role === "new",
         },
         {
+          target: "delete",
+          cond: (_, event) => event.data.role === "delete",
+        },
+        {
+          target: "edit",
+          cond: (_, event) => event.data.role === "edit",
+        },
+        {
           target: "switch",
           cond: (_, event) => event.data.role === "switch",
           actions: [
-            assign({
-              id: (_, event) => {
-                const { data } = event as SymphonyEvent;
-                const { content: conversationId } = data;
-                return conversationId;
-              },
+            assign((context, event) => {
+              const { data } = event;
+              const { content: conversationId } = data;
+              context.id = conversationId;
             }),
           ],
         },
@@ -99,12 +116,14 @@ const machine = createMachine(
         invoke: {
           src: (context) =>
             new Promise((resolve) => {
-              const { messages } = context;
+              const { generations } = context;
 
               const functionCall = pipe(
-                messages,
-                RAR.last,
-                O.map((message: Message) => message.function_call),
+                generations,
+                AR.last,
+                O.map(
+                  (generation: Generation) => generation.message.function_call
+                ),
                 O.chain(O.fromNullable)
               );
 
@@ -182,15 +201,16 @@ const machine = createMachine(
               target: "gpt4",
               cond: (_, event) => event.data,
               actions: [
-                "sendFunctionMessageToClients",
-                assign({
-                  messages: (context, event) => {
-                    const { messages } = context;
-                    const { data: message } = event;
+                assign((context, event) => {
+                  const { id, generations } = context;
+                  const { data: message } = event;
 
-                    return [...messages, message];
-                  },
+                  context.generations = [
+                    ...generations,
+                    createGeneration(message, id),
+                  ];
                 }),
+                "sendFunctionMessageToClients",
               ],
             },
             {
@@ -203,21 +223,32 @@ const machine = createMachine(
         invoke: {
           src: (context, event) =>
             openai.chat.completions.create({
-              messages: [...context.messages, event.data],
+              messages: [
+                {
+                  role: "system",
+                  content: `You are a friendly assistant. Keep your responses short.`,
+                },
+                ...context.generations.map((generation) => generation.message),
+                event.data,
+              ],
               model: "gpt-4",
               functions: [...typescriptFunctions, ...pythonFunctions],
             }),
           onDone: {
             target: "function",
             actions: [
-              "sendAssistantMessageToClients",
-              assign({
-                messages: (context, event) => {
-                  const { messages } = context;
-                  const { message } = event.data.choices[0];
-                  return [...messages, message];
-                },
+              assign((context, event) => {
+                const { id, generations } = context;
+                const { data } = event;
+                const { choices } = data;
+                const { message } = choices[0];
+
+                context.generations = [
+                  ...generations,
+                  createGeneration(message, id),
+                ];
               }),
+              "sendAssistantMessageToClients",
             ],
           },
           onError: {
@@ -236,9 +267,9 @@ const machine = createMachine(
           onDone: {
             target: "idle",
             actions: [
-              assign({
-                id: id(),
-                messages: [],
+              assign((context) => {
+                context.id = id();
+                context.generations = [];
               }),
             ],
           },
@@ -249,7 +280,7 @@ const machine = createMachine(
           src: () => Promise.resolve({}),
           onDone: {
             target: "idle",
-            actions: ["sendAllMessagesToClients"],
+            actions: ["sendConversationToClients"],
           },
         },
       },
@@ -264,22 +295,19 @@ const machine = createMachine(
 
             return pipe(
               generations,
-              RAR.filter(
+              AR.filter(
                 (generation: Generation) => generation.conversationId === id
-              ),
-              RAR.map((generation: Generation) => generation.message)
+              )
             );
           },
           onDone: {
             target: "idle",
             actions: [
-              assign({
-                messages: (_, event) => {
-                  const { data: messages } = event;
-                  return messages;
-                },
+              assign((context, event) => {
+                const { data: generations } = event;
+                context.generations = generations;
               }),
-              "sendAllMessagesToClients",
+              "sendConversationToClients",
             ],
           },
         },
@@ -301,18 +329,16 @@ const machine = createMachine(
 
                 const history = pipe(
                   generations,
-                  RAR.map(
-                    (generation: Generation) => generation.conversationId
-                  ),
-                  RAR.uniq(S.Eq),
-                  RAR.map((conversationId) =>
+                  AR.map((generation: Generation) => generation.conversationId),
+                  AR.uniq(S.Eq),
+                  AR.map((conversationId) =>
                     pipe(
                       generations,
-                      RAR.filter(
+                      AR.filter(
                         (generation: Generation) =>
                           generation.conversationId === conversationId
                       ),
-                      RAR.head,
+                      AR.head,
                       O.map(({ conversationId, message, timestamp }) => ({
                         id: conversationId,
                         timestamp,
@@ -321,7 +347,7 @@ const machine = createMachine(
                       O.toUndefined
                     )
                   ),
-                  RAR.reverse
+                  AR.reverse
                 );
 
                 wss.clients.forEach((client: WebSocket) => {
@@ -337,55 +363,178 @@ const machine = createMachine(
           },
         },
       },
+      delete: {
+        invoke: {
+          src: async (context) => {
+            const { id } = context;
+
+            await axios
+              .delete(
+                `${DATABASE_ENDPOINT}/generations?conversationId=eq.${id}`,
+                {
+                  headers: {
+                    Prefer: "return=representation",
+                  },
+                }
+              )
+              .then((response) => {
+                const deletedGeneration = pipe(response.data, AR.head);
+
+                if (O.isSome(deletedGeneration)) {
+                  wss.clients.forEach((client: WebSocket) => {
+                    client.send(
+                      JSON.stringify({
+                        role: "delete",
+                        content: deletedGeneration.value,
+                      })
+                    );
+                  });
+                }
+              });
+          },
+          onDone: {
+            target: "new",
+          },
+        },
+      },
+      edit: {
+        invoke: {
+          src: async (_, event) => {
+            const { data: message } = event;
+            const { content } = message;
+
+            await axios
+              .patch(
+                `${DATABASE_ENDPOINT}/generations?id=eq.${content.id}`,
+                {
+                  message: content.message,
+                },
+                {
+                  headers: {
+                    Prefer: "return=representation",
+                  },
+                }
+              )
+              .then((response) => {
+                const updatedGeneration = pipe(response.data, AR.head);
+
+                if (O.isSome(updatedGeneration)) {
+                  wss.clients.forEach((client: WebSocket) => {
+                    client.send(
+                      JSON.stringify({
+                        role: "edit",
+                        content: updatedGeneration.value,
+                      })
+                    );
+                  });
+                }
+              });
+
+            return content;
+          },
+          onDone: {
+            target: "idle",
+            actions: [
+              assign((context, event) => {
+                const { generations } = context;
+                const { data } = event;
+                const { id, message } = data;
+
+                context.generations = pipe(
+                  generations,
+                  AR.map((generation: Generation) => {
+                    if (generation.id === id) {
+                      return { ...generation, message };
+                    } else {
+                      return generation;
+                    }
+                  })
+                );
+              }),
+            ],
+          },
+        },
+      },
       idle: {},
     },
   },
   {
     actions: {
-      receiveUserMessageFromClient: async (context, event) => {
-        const { id } = context;
-        const { data: message } = event;
+      receiveUserMessageFromClient: async (context) => {
+        const { generations } = context;
 
-        await axios.post(`${DATABASE_ENDPOINT}/generations`, {
-          message: message,
-          conversationId: id,
-        });
+        const recentUserGeneration = pipe(
+          generations,
+          AR.findLast(
+            (generation: Generation) => generation.message.role === "user"
+          )
+        );
+
+        if (O.isSome(recentUserGeneration)) {
+          wss.clients.forEach((client: WebSocket) => {
+            client.send(JSON.stringify(recentUserGeneration.value));
+          });
+
+          await axios.post(
+            `${DATABASE_ENDPOINT}/generations`,
+            recentUserGeneration.value
+          );
+        }
       },
-      sendAssistantMessageToClients: async (context, event) => {
-        const { id } = context;
-        const { message } = event.data.choices[0];
+      sendAssistantMessageToClients: async (context) => {
+        const { generations } = context;
+
+        const recentAssistantGeneration = pipe(
+          generations,
+          AR.findLast(
+            (generation: Generation) => generation.message.role === "assistant"
+          )
+        );
+
+        if (O.isSome(recentAssistantGeneration)) {
+          wss.clients.forEach((client: WebSocket) => {
+            client.send(JSON.stringify(recentAssistantGeneration.value));
+          });
+
+          await axios.post(
+            `${DATABASE_ENDPOINT}/generations`,
+            recentAssistantGeneration.value
+          );
+        }
+      },
+      sendFunctionMessageToClients: async (context) => {
+        const { generations } = context;
+
+        const recentFunctionGeneration = pipe(
+          generations,
+          AR.findLast(
+            (generation: Generation) => generation.message.role === "function"
+          )
+        );
+
+        if (O.isSome(recentFunctionGeneration)) {
+          wss.clients.forEach((client: WebSocket) => {
+            client.send(JSON.stringify(recentFunctionGeneration.value));
+          });
+
+          await axios.post(
+            `${DATABASE_ENDPOINT}/generations`,
+            recentFunctionGeneration.value
+          );
+        }
+      },
+      sendConversationToClients: (context) => {
+        const { generations } = context;
 
         wss.clients.forEach((client: WebSocket) => {
-          client.send(JSON.stringify(message));
-        });
-
-        await axios.post(`${DATABASE_ENDPOINT}/generations`, {
-          message: message,
-          conversationId: id,
-        });
-      },
-      sendFunctionMessageToClients: async (context, event) => {
-        const { id } = context;
-        const { data: message } = event;
-
-        wss.clients.forEach((client: WebSocket) => {
-          client.send(JSON.stringify(message));
-        });
-
-        await axios.post(`${DATABASE_ENDPOINT}/generations`, {
-          message: message,
-          conversationId: id,
-        });
-      },
-      sendAllMessagesToClients: (context) => {
-        const { messages } = context;
-
-        wss.clients.forEach((client: WebSocket) => {
-          messages
-            .filter((message) => message.role !== "system")
-            .map((message) => {
-              client.send(JSON.stringify(message));
-            });
+          client.send(
+            JSON.stringify({
+              role: "switch",
+              content: generations.filter(
+                (generation) => generation.message.role !== "system"
+              ),
+            })
+          );
         });
       },
     },
