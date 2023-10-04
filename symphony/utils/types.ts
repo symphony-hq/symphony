@@ -19,6 +19,11 @@ export interface Generation {
   message: Message;
 }
 
+export interface Connection {
+  name: string;
+  color: string;
+}
+
 export interface Property {
   type: string;
   description?: string;

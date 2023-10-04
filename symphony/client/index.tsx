@@ -3,10 +3,18 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import * as ReactDOM from "react-dom/client";
 import * as cx from "classnames";
 import { encodeFunctionName, decodeFunctionName } from "../utils/functions";
-import { Generation } from "../utils/types";
+import { Connection, Generation } from "../utils/types";
 import "./index.scss";
 import { parseISO, format } from "date-fns";
-import { XIcon, ThreeBarsIcon, TrashIcon } from "@primer/octicons-react";
+import {
+  XIcon,
+  ThreeBarsIcon,
+  TrashIcon,
+  DiscussionClosedIcon,
+} from "@primer/octicons-react";
+import { pipe } from "fp-ts/lib/function";
+import * as AR from "fp-ts/Array";
+import * as O from "fp-ts/Option";
 
 const interfaceCache = {};
 
@@ -99,9 +107,11 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
 const Generation = ({
   generation,
   socketRef,
+  connections,
 }: {
   generation: Generation;
   socketRef: React.RefObject<WebSocket>;
+  connections: Connection[];
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const { message } = generation;
@@ -118,7 +128,17 @@ const Generation = ({
         if (!isEditing) setIsEditing(true);
       }}
     >
-      <div className={cx("avatar", { user: message.role === "user" })} />
+      <div
+        className="avatar"
+        style={{
+          backgroundColor: pipe(
+            connections,
+            AR.findFirst((connection) => connection.name === message.role),
+            O.map((connection) => connection.color),
+            O.getOrElse(() => "#d4d4d4")
+          ),
+        }}
+      />
 
       {isEditing ? (
         <EditGeneration {...{ generation, setIsEditing, socketRef }} />
@@ -156,9 +176,14 @@ const Generation = ({
 const App = () => {
   const socketRef = useRef(null);
   const [generations, setGenerations] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
+  const [connections, setConnections] = useState([
+    {
+      name: "user",
+      color: "#eb5528",
+    },
+  ]);
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3001");
@@ -166,7 +191,13 @@ const App = () => {
     socket.addEventListener("open", () => {
       console.log("Connected to Symphony Service");
       socket.send(JSON.stringify({ role: "restore", content: "" }));
-      setIsConnected(true);
+      setConnections((connections) => [
+        ...connections,
+        {
+          name: "assistant",
+          color: "#d4d4d4",
+        },
+      ]);
     });
 
     socket.addEventListener("message", (event) => {
@@ -206,7 +237,9 @@ const App = () => {
 
     socket.addEventListener("close", (event) => {
       console.log("Disconnected from Symphony Service", event.code);
-      setIsConnected(false);
+      setConnections((connections) =>
+        connections.filter((connection) => connection.name !== "assistant")
+      );
     });
 
     socket.addEventListener("error", (event) => {
@@ -240,26 +273,44 @@ const App = () => {
       <div className="page">
         <div className="navigation">
           <div className="name">Symphony</div>
-          <div
-            className="menu"
-            onClick={() => {
-              setIsHistoryVisible(!isHistoryVisible);
-              socketRef.current.send(
-                JSON.stringify({
-                  role: "history",
-                  content: "",
-                })
-              );
-            }}
-          >
-            {isHistoryVisible ? <XIcon /> : <ThreeBarsIcon />}
+
+          <div className="right">
+            <div className="connections">
+              {connections.map((connection) => (
+                <div className="connection">
+                  <div
+                    className="avatar"
+                    style={{ backgroundColor: connection.color }}
+                  />
+                  <div className="name">{connection.name}</div>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="menu"
+              onClick={() => {
+                setIsHistoryVisible(!isHistoryVisible);
+                socketRef.current.send(
+                  JSON.stringify({
+                    role: "history",
+                    content: "",
+                  })
+                );
+              }}
+            >
+              {isHistoryVisible ? <XIcon /> : <ThreeBarsIcon />}
+            </div>
           </div>
         </div>
 
         <div className="conversation">
           <div className="messages" ref={messagesRef}>
             {generations.map((generation: Generation) => (
-              <Generation key={generation.id} {...{ generation, socketRef }} />
+              <Generation
+                key={generation.id}
+                {...{ generation, socketRef, connections }}
+              />
             ))}
           </div>
         </div>
@@ -289,10 +340,12 @@ const App = () => {
       <div className={cx("history", { visible: isHistoryVisible })}>
         <div className="bar">
           <div className="name">History</div>
-          <div className={cx("status", { connected: isConnected })}>
-            <div className="tooltip">
-              {isConnected ? "Connected" : "Disconnected"}
+
+          <div className={cx("finetune")}>
+            <div className="icon">
+              <DiscussionClosedIcon />
             </div>
+            <div className="tooltip">Pick for fine-tuning</div>
           </div>
         </div>
 
