@@ -19,6 +19,9 @@ fi
 # Create database
 psql -h $DB_HOST -p $DB_PORT -c "CREATE DATABASE $DB_NAME;"
 
+# Add pgcrypto extension to the database
+psql -h $DB_HOST -p $DB_PORT -d $DB_NAME -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
 # Create role
 psql -h $DB_HOST -p $DB_PORT -c "CREATE ROLE $DB_ROLE nologin;"
 
