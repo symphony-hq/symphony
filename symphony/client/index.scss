@@ -131,6 +131,7 @@ body {
           padding: ms(-4);
           gap: ms(-4);
           border-radius: ms(-6);
+          cursor: pointer;
 
           &:hover,
           &.editing {
@@ -156,21 +157,24 @@ body {
             flex-direction: column;
             gap: ms(-4);
 
+            .textareas {
+              display: flex;
+              flex-direction: row;
+              gap: ms(0);
+            }
+
             .input {
               font-size: ms(0);
               resize: none;
-              border-radius: ms(-4);
               outline: none;
               border: 0px solid $neutral-200;
               width: 100%;
               padding: 0;
               background: transparent;
-
-              &.function {
-                font-size: ms(-1);
-                font-family: "apercu mono", monospace;
-                color: $neutral-500;
-              }
+              font-family: "apercu mono", monospace;
+              font-size: ms(-1);
+              color: $neutral-500;
+              overflow-y: hidden;
             }
 
             .actions {
@@ -179,10 +183,16 @@ body {
               gap: ms(-4);
               justify-content: flex-end;
 
+              .line {
+                width: 1px;
+                height: calc(100%);
+                background: $neutral-200;
+              }
+
               .save,
-              .discard {
+              .discard,
+              .delete {
                 font-size: ms(-1);
-                background-color: $neutral-200;
                 padding: ms(-4) ms(-3);
                 border-radius: ms(-8);
                 cursor: pointer;
@@ -198,13 +208,23 @@ body {
                 }
               }
 
-              .discard {
+              .delete {
                 color: $red-700;
                 background: $red-200;
 
                 &:hover {
                   color: $red-900;
                   background: $red-300;
+                }
+              }
+
+              .discard {
+                color: $neutral-700;
+                background: $neutral-200;
+
+                &:hover {
+                  color: $neutral-900;
+                  background: $neutral-300;
                 }
               }
             }

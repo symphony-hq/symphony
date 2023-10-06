@@ -16,6 +16,7 @@ import * as S from "fp-ts/string";
 import axios from "axios";
 import * as AR from "fp-ts/Array";
 import { UUID } from "crypto";
+import * as fs from "fs";
 
 dotenv.config();
 
@@ -91,12 +92,20 @@ const machine = createMachine(
           cond: (_, event) => event.data.role === "new",
         },
         {
-          target: "delete",
-          cond: (_, event) => event.data.role === "delete",
+          target: "deleteConversation",
+          cond: (_, event) => event.data.role === "deleteConversation",
         },
         {
           target: "edit",
           cond: (_, event) => event.data.role === "edit",
+        },
+        {
+          target: "deleteGeneration",
+          cond: (_, event) => event.data.role === "deleteGeneration",
+        },
+        {
+          target: "finetune",
+          cond: (_, event) => event.data.role === "finetune",
         },
         {
           target: "switch",
@@ -226,7 +235,8 @@ const machine = createMachine(
               messages: [
                 {
                   role: "system",
-                  content: `You are a friendly assistant. Keep your responses short.`,
+                  content:
+                    "You are a friendly assistant. Keep your responses short.",
                 },
                 ...context.generations.map((generation) => generation.message),
                 event.data,
@@ -363,7 +373,7 @@ const machine = createMachine(
           },
         },
       },
-      delete: {
+      deleteConversation: {
         invoke: {
           src: async (context) => {
             const { id } = context;
@@ -384,7 +394,7 @@ const machine = createMachine(
                   wss.clients.forEach((client: WebSocket) => {
                     client.send(
                       JSON.stringify({
-                        role: "delete",
+                        role: "deleteConversation",
                         content: deletedGeneration.value,
                       })
                     );
@@ -452,6 +462,105 @@ const machine = createMachine(
                 );
               }),
             ],
+          },
+        },
+      },
+      deleteGeneration: {
+        invoke: {
+          src: async (_, event) => {
+            const { data: message } = event;
+            const { content: generationId } = message;
+
+            await axios
+              .delete(
+                `${DATABASE_ENDPOINT}/generations?id=eq.${generationId}`,
+                {
+                  headers: {
+                    Prefer: "return=representation",
+                  },
+                }
+              )
+              .then((response) => {
+                const deletedGeneration = pipe(response.data, AR.head);
+
+                if (O.isSome(deletedGeneration)) {
+                  wss.clients.forEach((client: WebSocket) => {
+                    client.send(
+                      JSON.stringify({
+                        role: "deleteGeneration",
+                        content: deletedGeneration.value,
+                      })
+                    );
+                  });
+                }
+              });
+
+            return generationId;
+          },
+          onDone: {
+            target: "idle",
+            actions: [
+              assign((context, event) => {
+                const { generations } = context;
+                const { data: generationId } = event;
+
+                context.generations = pipe(
+                  generations,
+                  AR.filter(
+                    (generation: Generation) => generation.id !== generationId
+                  )
+                );
+              }),
+            ],
+          },
+        },
+      },
+      finetune: {
+        invoke: {
+          src: async () => {
+            const { data: generations } = await axios.get(
+              `${DATABASE_ENDPOINT}/generations?order=timestamp`
+            );
+
+            const conversations = generations.reduce((acc, generation) => {
+              const key = generation.conversationId;
+              if (!acc[key]) {
+                acc[key] = [
+                  {
+                    role: "system",
+                    content:
+                      "You are a friendly assistant. Keep your responses short.",
+                  },
+                ];
+              }
+              acc[key].push(generation.message);
+              return acc;
+            }, {});
+
+            const conversationsJsonl = Object.values(conversations)
+              .map((conversation) => JSON.stringify({ messages: conversation }))
+              .join("\n");
+
+            fs.writeFile(
+              "./symphony/server/sudoku.jsonl",
+              conversationsJsonl,
+              () => {}
+            );
+
+            await openai.files
+              .create({
+                file: fs.createReadStream("./symphony/server/data.jsonl"),
+                purpose: "fine-tune",
+              })
+              .then(async (file) => {
+                await openai.fineTuning.jobs.create({
+                  training_file: file.id,
+                  model: "gpt-3.5-turbo",
+                });
+              });
+          },
+          onDone: {
+            target: "idle",
           },
         },
       },

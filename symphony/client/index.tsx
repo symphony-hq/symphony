@@ -15,6 +15,7 @@ import {
 import { pipe } from "fp-ts/lib/function";
 import * as AR from "fp-ts/Array";
 import * as O from "fp-ts/Option";
+import { produce } from "immer";
 
 const interfaceCache = {};
 
@@ -38,36 +39,63 @@ const getInterface = (name: string, type: string) => {
 
 const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
   const [content, setContent] = useState(generation.message.content);
+  const [args, setArgs] = useState(generation.message.function_call?.arguments);
 
-  const textAreaRef = useRef(null);
+  const contentRef = useRef(null);
+  const argsRef = useRef(null);
 
   useEffect(() => {
-    textAreaRef.current.style.height = "inherit";
-    const scrollHeight = textAreaRef.current.scrollHeight;
-    textAreaRef.current.style.height = scrollHeight + "px";
+    contentRef.current.style.height = "inherit";
+    const scrollHeight = contentRef.current.scrollHeight;
+    contentRef.current.style.height = scrollHeight + "px";
 
     // Set cursor to the end of the content
-    const length = textAreaRef.current.value.length;
-    textAreaRef.current.setSelectionRange(length, length);
+    const length = contentRef.current.value.length;
+    contentRef.current.setSelectionRange(length, length);
   }, []);
 
   return (
     <div className="editing">
-      <textarea
-        className={cx("input", {
-          function:
-            generation.message.function_call ||
-            generation.message.role === "function",
-        })}
-        value={content}
-        onChange={(event) => {
-          setContent(event.target.value);
-        }}
-        ref={textAreaRef}
-        autoFocus={true}
-      />
+      <div className="textareas">
+        <textarea
+          className={cx("input")}
+          value={content}
+          onChange={(event) => {
+            setContent(event.target.value);
+          }}
+          ref={contentRef}
+          autoFocus={true}
+        />
+
+        {args && (
+          <textarea
+            className={cx("input")}
+            value={args}
+            onChange={(event) => {
+              setArgs(event.target.value);
+            }}
+            ref={argsRef}
+          />
+        )}
+      </div>
 
       <div className="actions">
+        <div
+          className="delete"
+          onClick={() => {
+            socketRef.current.send(
+              JSON.stringify({
+                role: "deleteGeneration",
+                content: generation.id,
+              })
+            );
+          }}
+        >
+          Delete
+        </div>
+
+        <div className="line" />
+
         <div
           className="discard"
           onClick={() => {
@@ -76,15 +104,20 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
         >
           Discard Changes
         </div>
+
         <div
           className="save"
           onClick={() => {
             setIsEditing(false);
 
-            const updatedMessage = {
-              ...generation.message,
-              content,
-            };
+            const updatedMessage = produce(generation.message, (draft) => {
+              draft.content = content;
+
+              if (args) {
+                draft.function_call = draft.function_call || {};
+                draft.function_call.arguments = args;
+              }
+            });
 
             socketRef.current.send(
               JSON.stringify({
@@ -219,12 +252,19 @@ const App = () => {
             }
           })
         );
-      } else if (message.role === "delete") {
+      } else if (message.role === "deleteConversation") {
         const { content: deletedGeneration } = message;
         setConversations((conversations) =>
           conversations.filter(
             (conversation) =>
               conversation.id !== deletedGeneration.conversationId
+          )
+        );
+      } else if (message.role === "deleteGeneration") {
+        const { content: deletedGeneration } = message;
+        setGenerations((generations: Generation[]) =>
+          generations.filter(
+            (generation) => generation.id !== deletedGeneration.id
           )
         );
       } else {
@@ -341,7 +381,17 @@ const App = () => {
         <div className="bar">
           <div className="name">History</div>
 
-          <div className={cx("finetune")}>
+          <div
+            className={cx("finetune")}
+            onClick={() => {
+              socketRef.current.send(
+                JSON.stringify({
+                  role: "finetune",
+                  content: "",
+                })
+              );
+            }}
+          >
             <div className="icon">
               <DiscussionClosedIcon />
             </div>
@@ -403,7 +453,7 @@ const App = () => {
                     onClick={() => {
                       socketRef.current.send(
                         JSON.stringify({
-                          role: "delete",
+                          role: "deleteConversation",
                           content: conversation.id,
                         })
                       );
