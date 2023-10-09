@@ -167,7 +167,7 @@ body {
               font-size: ms(0);
               resize: none;
               outline: none;
-              border: 0px solid $neutral-200;
+              border: none;
               width: 100%;
               padding: 0;
               background: transparent;
@@ -373,6 +373,168 @@ body {
         &:hover,
         &.selected {
           background: $neutral-800;
+        }
+      }
+    }
+  }
+
+  .personalize {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100dvh;
+    background: #{$neutral-900}90;
+
+    .connection {
+      display: flex;
+      flex-direction: column;
+      width: ms(13);
+      background-color: $neutral-50;
+      padding: ms(-2);
+      gap: ms(-2);
+      border-radius: ms(-6);
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+
+        .left {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: ms(-4);
+
+          .avatar {
+            width: ms(1);
+            height: ms(1);
+            flex-shrink: 0;
+            border-radius: ms(-8);
+          }
+
+          .name {
+            text-transform: capitalize;
+          }
+        }
+
+        .model {
+          display: flex;
+          color: $neutral-500;
+          border: 1px solid $neutral-200;
+          border-radius: ms(-8);
+          padding: ms(-6);
+          cursor: pointer;
+          position: relative;
+          width: ms(9);
+
+          .choice {
+            font-size: ms(0);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &:hover {
+              color: $neutral-700;
+            }
+          }
+
+          .options {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            top: calc(-#{ms(-2)} - 1px);
+            left: ms(10);
+            background: $neutral-800;
+            padding: ms(-4);
+            border-radius: ms(-6);
+            width: ms(10);
+            font-family: "apercu mono", monospace;
+            height: ms(13);
+            overflow-y: scroll;
+
+            .description {
+              font-size: ms(-1);
+              padding-bottom: ms(-4);
+            }
+
+            .option {
+              padding: ms(-6);
+              border-radius: ms(-8);
+              color: $neutral-200;
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              gap: ms(-6);
+              word-break: break-all;
+
+              .check {
+                display: flex;
+                opacity: 0;
+
+                &.selected {
+                  opacity: 1;
+                  color: $green-500 !important;
+                }
+              }
+
+              &:hover {
+                background: $neutral-700;
+
+                .check {
+                  color: $neutral-500;
+                  opacity: 1;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .input {
+        border: 1px solid $neutral-200;
+        border-radius: ms(-8);
+        outline: none;
+        background: transparent;
+        font-size: ms(0);
+        padding: ms(-6);
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: row;
+        gap: ms(-2);
+        justify-content: flex-end;
+
+        .save,
+        .discard {
+          font-size: ms(-1);
+          padding: ms(-4) ms(-3);
+          border-radius: ms(-8);
+          cursor: pointer;
+        }
+
+        .save {
+          color: $green-700;
+          background: $green-200;
+
+          &:hover {
+            color: $green-900;
+            background: $green-300;
+          }
+        }
+
+        .discard {
+          color: $neutral-700;
+          background: $neutral-200;
+
+          &:hover {
+            color: $neutral-900;
+            background: $neutral-300;
+          }
         }
       }
     }

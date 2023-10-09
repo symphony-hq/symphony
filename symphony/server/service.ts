@@ -10,7 +10,7 @@ import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
 import { exec } from "child_process";
 import { decodeFunctionName, encodeFunctionName } from "../utils/functions";
-import { Generation, Message } from "../utils/types";
+import { Generation, Message, Context } from "../utils/types";
 import { v4 as id } from "uuid";
 import * as S from "fp-ts/string";
 import axios from "axios";
@@ -53,12 +53,12 @@ const machine = createMachine(
     context: {
       id: id(),
       generations: [],
+      model: "gpt-4",
+      instruction: "You are a friendly assistant. Keep your responses short.",
+      models: [],
     },
     schema: {
-      context: {} as {
-        id: UUID;
-        generations: Generation[];
-      },
+      context: {} as Context,
     },
     predictableActionArguments: true,
     on: {
@@ -106,6 +106,21 @@ const machine = createMachine(
         {
           target: "finetune",
           cond: (_, event) => event.data.role === "finetune",
+        },
+        {
+          target: "idle",
+          cond: (_, event) => event.data.role === "personalize",
+          actions: [
+            assign((context, event) => {
+              const { data } = event;
+              const { content } = data;
+              const { model, instruction } = content;
+
+              context.model = model;
+              context.instruction = instruction;
+            }),
+            "sendContextToClients",
+          ],
         },
         {
           target: "switch",
@@ -235,13 +250,12 @@ const machine = createMachine(
               messages: [
                 {
                   role: "system",
-                  content:
-                    "You are a friendly assistant. Keep your responses short.",
+                  content: context.instruction,
                 },
                 ...context.generations.map((generation) => generation.message),
                 event.data,
               ],
-              model: "gpt-4",
+              model: context.model,
               functions: [...typescriptFunctions, ...pythonFunctions],
             }),
           onDone: {
@@ -287,10 +301,19 @@ const machine = createMachine(
       },
       restore: {
         invoke: {
-          src: () => Promise.resolve({}),
+          src: async () => {
+            const { data: models } = await openai.models.list();
+            return models;
+          },
           onDone: {
             target: "idle",
-            actions: ["sendConversationToClients"],
+            actions: [
+              assign((context, event) => {
+                const { data: models } = event;
+                context.models = models;
+              }),
+              "sendContextToClients",
+            ],
           },
         },
       },
@@ -562,6 +585,9 @@ const machine = createMachine(
           onDone: {
             target: "idle",
           },
+          onError: {
+            target: "idle",
+          },
         },
       },
       idle: {},
@@ -642,6 +668,16 @@ const machine = createMachine(
               content: generations.filter(
                 (generation) => generation.message.role !== "system"
               ),
+            })
+          );
+        });
+      },
+      sendContextToClients: (context) => {
+        wss.clients.forEach((client: WebSocket) => {
+          client.send(
+            JSON.stringify({
+              role: "restore",
+              content: context,
             })
           );
         });

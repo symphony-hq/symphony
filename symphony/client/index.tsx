@@ -10,12 +10,14 @@ import {
   XIcon,
   ThreeBarsIcon,
   TrashIcon,
-  DiscussionClosedIcon,
+  GoalIcon,
+  CheckIcon,
 } from "@primer/octicons-react";
 import { pipe } from "fp-ts/lib/function";
 import * as AR from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import { produce } from "immer";
+import { Model } from "openai/resources";
 
 const interfaceCache = {};
 
@@ -211,12 +213,19 @@ const App = () => {
   const [generations, setGenerations] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<
+    O.Option<Connection>
+  >(O.none);
   const [connections, setConnections] = useState([
     {
       name: "user",
       color: "#eb5528",
     },
   ]);
+
+  const [models, setModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState("gpt-4");
+  const [instruction, setInstruction] = useState<string>("");
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3001");
@@ -267,6 +276,14 @@ const App = () => {
             (generation) => generation.id !== deletedGeneration.id
           )
         );
+      } else if (message.role === "restore") {
+        const { content: context } = message;
+        const { models, generations, instruction, model } = context;
+        setSelectedConnection(O.none);
+        setGenerations(generations);
+        setSelectedModel(model);
+        setInstruction(instruction);
+        setModels(models);
       } else {
         setGenerations((generations: Generation[]) => [
           ...generations,
@@ -317,7 +334,13 @@ const App = () => {
           <div className="right">
             <div className="connections">
               {connections.map((connection) => (
-                <div className="connection">
+                <div
+                  key={connection.name}
+                  className="connection"
+                  onClick={() => {
+                    setSelectedConnection(O.some(connection));
+                  }}
+                >
                   <div
                     className="avatar"
                     style={{ backgroundColor: connection.color }}
@@ -393,9 +416,9 @@ const App = () => {
             }}
           >
             <div className="icon">
-              <DiscussionClosedIcon />
+              <GoalIcon />
             </div>
-            <div className="tooltip">Pick for fine-tuning</div>
+            <div className="tooltip">Fine-tune</div>
           </div>
         </div>
 
@@ -468,6 +491,93 @@ const App = () => {
           ))}
         </div>
       </div>
+
+      {O.isSome(selectedConnection) && (
+        <div className="personalize">
+          <div className="connection">
+            <div className="top">
+              <div className="left">
+                <div
+                  className="avatar"
+                  style={{
+                    backgroundColor: selectedConnection.value.color,
+                  }}
+                />
+                <div className="name">{selectedConnection.value.name}</div>
+              </div>
+
+              {selectedConnection.value.name !== "user" && (
+                <div className="model">
+                  <div className="choice">{selectedModel}</div>
+
+                  <div className="options">
+                    <div className="description">
+                      Select a model to use for the assistant.
+                    </div>
+
+                    {models
+                      .filter((model: Model) => model.id.includes("gpt"))
+                      .map((model: Model) => (
+                        <div
+                          key={model.id}
+                          className="option"
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                          }}
+                        >
+                          <div
+                            className={cx("check", {
+                              selected: model.id === selectedModel,
+                            })}
+                          >
+                            <CheckIcon />
+                          </div>
+                          <div className="label">{model.id}</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <textarea
+              className="input"
+              value={instruction}
+              onChange={(event) => {
+                setInstruction(event.target.value);
+              }}
+            />
+
+            <div className="actions">
+              <div
+                className="discard"
+                onClick={() => {
+                  setSelectedConnection(O.none);
+                }}
+              >
+                Discard changes
+              </div>
+
+              <div
+                className="save"
+                onClick={() => {
+                  socketRef.current.send(
+                    JSON.stringify({
+                      role: "personalize",
+                      content: {
+                        model: selectedModel,
+                        instruction,
+                      },
+                    })
+                  );
+                }}
+              >
+                Save changes
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

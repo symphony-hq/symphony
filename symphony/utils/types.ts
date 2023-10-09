@@ -1,4 +1,5 @@
 import { UUID } from "crypto";
+import { Model } from "openai/resources";
 
 export interface FunctionCall {
   name: string;
@@ -22,6 +23,14 @@ export interface Generation {
 export interface Connection {
   name: string;
   color: string;
+}
+
+export interface Context {
+  id: UUID;
+  generations: Generation[];
+  model: string;
+  instruction: string;
+  models: Model[];
 }
 
 export interface Property {
