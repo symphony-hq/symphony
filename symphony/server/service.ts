@@ -9,7 +9,16 @@ import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
 import { exec } from "child_process";
-import { decodeFunctionName, encodeFunctionName } from "../utils/functions";
+import {
+  decodeFunctionName,
+  encodeFunctionName,
+  getColor,
+  getModelIdFromAssistant,
+  getAssistantFromConnections,
+  getSystemDescription,
+  getUserFromConnections,
+  getDescriptionFromConnection,
+} from "../utils/functions";
 import { Generation, Message, Context } from "../utils/types";
 import { v4 as id } from "uuid";
 import * as S from "fp-ts/string";
@@ -53,9 +62,22 @@ const machine = createMachine(
     context: {
       id: id(),
       generations: [],
-      model: "gpt-4",
-      instruction: "You are a friendly assistant. Keep your responses short.",
       models: [],
+      connections: [
+        {
+          name: "assistant",
+          color: "#d4d4d4",
+          description:
+            "You are a friendly assistant. Keep your responses short.",
+          modelId: "gpt-4",
+        },
+        {
+          name: "user",
+          color: getColor(),
+          description: "I'm a user. I'm here to talk to you.",
+          modelId: "human",
+        },
+      ],
     },
     schema: {
       context: {} as Context,
@@ -112,12 +134,17 @@ const machine = createMachine(
           cond: (_, event) => event.data.role === "personalize",
           actions: [
             assign((context, event) => {
+              const { connections } = context;
               const { data } = event;
-              const { content } = data;
-              const { model, instruction } = content;
+              const { content: updatedConnection } = data;
 
-              context.model = model;
-              context.instruction = instruction;
+              context.connections = pipe(
+                connections,
+                AR.filter(
+                  (connection) => connection.name !== updatedConnection.name
+                ),
+                AR.append(updatedConnection)
+              );
             }),
             "sendContextToClients",
           ],
@@ -250,12 +277,27 @@ const machine = createMachine(
               messages: [
                 {
                   role: "system",
-                  content: context.instruction,
+                  content: getSystemDescription(
+                    pipe(
+                      context.connections,
+                      getAssistantFromConnections,
+                      getDescriptionFromConnection
+                    ),
+                    pipe(
+                      context.connections,
+                      getUserFromConnections,
+                      getDescriptionFromConnection
+                    )
+                  ),
                 },
                 ...context.generations.map((generation) => generation.message),
                 event.data,
               ],
-              model: context.model,
+              model: pipe(
+                context.connections,
+                getAssistantFromConnections,
+                getModelIdFromAssistant
+              ),
               functions: [...typescriptFunctions, ...pythonFunctions],
             }),
           onDone: {
@@ -314,6 +356,10 @@ const machine = createMachine(
               }),
               "sendContextToClients",
             ],
+          },
+          onError: {
+            target: "idle",
+            actions: ["sendContextToClients"],
           },
         },
       },
@@ -540,22 +586,34 @@ const machine = createMachine(
       },
       finetune: {
         invoke: {
-          src: async () => {
+          src: async (context) => {
             const { data: generations } = await axios.get(
               `${DATABASE_ENDPOINT}/generations?order=timestamp`
             );
 
             const conversations = generations.reduce((acc, generation) => {
               const key = generation.conversationId;
+
               if (!acc[key]) {
                 acc[key] = [
                   {
                     role: "system",
-                    content:
-                      "You are a friendly assistant. Keep your responses short.",
+                    content: getSystemDescription(
+                      pipe(
+                        context.connections,
+                        getAssistantFromConnections,
+                        getDescriptionFromConnection
+                      ),
+                      pipe(
+                        context.connections,
+                        getUserFromConnections,
+                        getDescriptionFromConnection
+                      )
+                    ),
                   },
                 ];
               }
+
               acc[key].push(generation.message);
               return acc;
             }, {});
@@ -565,7 +623,7 @@ const machine = createMachine(
               .join("\n");
 
             fs.writeFile(
-              "./symphony/server/sudoku.jsonl",
+              "./symphony/server/data.jsonl",
               conversationsJsonl,
               () => {}
             );
@@ -578,7 +636,11 @@ const machine = createMachine(
               .then(async (file) => {
                 await openai.fineTuning.jobs.create({
                   training_file: file.id,
-                  model: "gpt-3.5-turbo",
+                  model: pipe(
+                    context.connections,
+                    getAssistantFromConnections,
+                    getModelIdFromAssistant
+                  ),
                 });
               });
           },

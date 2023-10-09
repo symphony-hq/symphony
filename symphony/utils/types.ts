@@ -23,13 +23,14 @@ export interface Generation {
 export interface Connection {
   name: string;
   color: string;
+  description: string;
+  modelId: string;
 }
 
 export interface Context {
   id: UUID;
   generations: Generation[];
-  model: string;
-  instruction: string;
+  connections: Connection[];
   models: Model[];
 }
 

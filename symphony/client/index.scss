@@ -60,7 +60,7 @@ body {
 
         .connections {
           display: flex;
-          flex-direction: row;
+          flex-direction: row-reverse;
           gap: ms(-6);
 
           .connection {
@@ -385,10 +385,11 @@ body {
     display: flex;
     flex-direction: row;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     width: 100vw;
-    height: 100dvh;
-    background: #{$neutral-900}90;
+    height: calc(100dvh - 48px - ms(-2));
+    background: #{$neutral-900}dd;
+    padding-top: calc(48px + ms(-2));
 
     .connection {
       display: flex;
@@ -423,9 +424,9 @@ body {
 
         .model {
           display: flex;
-          color: $neutral-500;
+          color: $neutral-800;
           border: 1px solid $neutral-200;
-          border-radius: ms(-8);
+          border-radius: ms(-6);
           padding: ms(-6);
           cursor: pointer;
           position: relative;
@@ -436,10 +437,10 @@ body {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+          }
 
-            &:hover {
-              color: $neutral-700;
-            }
+          &:hover {
+            color: $neutral-800;
           }
 
           .options {
@@ -459,6 +460,7 @@ body {
             .description {
               font-size: ms(-1);
               padding-bottom: ms(-4);
+              color: $neutral-500;
             }
 
             .option {
@@ -496,7 +498,7 @@ body {
 
       .input {
         border: 1px solid $neutral-200;
-        border-radius: ms(-8);
+        border-radius: ms(-6);
         outline: none;
         background: transparent;
         font-size: ms(0);

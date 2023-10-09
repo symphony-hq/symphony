@@ -48,8 +48,14 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
 
   useEffect(() => {
     contentRef.current.style.height = "inherit";
-    const scrollHeight = contentRef.current.scrollHeight;
-    contentRef.current.style.height = scrollHeight + "px";
+    const contentScrollHeight = contentRef.current.scrollHeight;
+    contentRef.current.style.height = contentScrollHeight + "px";
+
+    if (argsRef.current) {
+      argsRef.current.style.height = "inherit";
+      const argsScrollHeight = argsRef.current.scrollHeight;
+      argsRef.current.style.height = argsScrollHeight + "px";
+    }
 
     // Set cursor to the end of the content
     const length = contentRef.current.value.length;
@@ -210,22 +216,16 @@ const Generation = ({
 
 const App = () => {
   const socketRef = useRef(null);
+
   const [generations, setGenerations] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
+
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
   const [selectedConnection, setSelectedConnection] = useState<
     O.Option<Connection>
   >(O.none);
-  const [connections, setConnections] = useState([
-    {
-      name: "user",
-      color: "#eb5528",
-    },
-  ]);
-
-  const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState("gpt-4");
-  const [instruction, setInstruction] = useState<string>("");
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3001");
@@ -233,13 +233,6 @@ const App = () => {
     socket.addEventListener("open", () => {
       console.log("Connected to Symphony Service");
       socket.send(JSON.stringify({ role: "restore", content: "" }));
-      setConnections((connections) => [
-        ...connections,
-        {
-          name: "assistant",
-          color: "#d4d4d4",
-        },
-      ]);
     });
 
     socket.addEventListener("message", (event) => {
@@ -278,12 +271,11 @@ const App = () => {
         );
       } else if (message.role === "restore") {
         const { content: context } = message;
-        const { models, generations, instruction, model } = context;
+        const { connections, models, generations } = context;
         setSelectedConnection(O.none);
         setGenerations(generations);
-        setSelectedModel(model);
-        setInstruction(instruction);
         setModels(models);
+        setConnections(connections);
       } else {
         setGenerations((generations: Generation[]) => [
           ...generations,
@@ -506,10 +498,10 @@ const App = () => {
                 <div className="name">{selectedConnection.value.name}</div>
               </div>
 
-              {selectedConnection.value.name !== "user" && (
-                <div className="model">
-                  <div className="choice">{selectedModel}</div>
+              <div className="model">
+                <div className="choice">{selectedConnection.value.modelId}</div>
 
+                {selectedConnection.value.name !== "user" && (
                   <div className="options">
                     <div className="description">
                       Select a model to use for the assistant.
@@ -522,12 +514,19 @@ const App = () => {
                           key={model.id}
                           className="option"
                           onClick={() => {
-                            setSelectedModel(model.id);
+                            setSelectedConnection(
+                              O.some(
+                                produce(selectedConnection.value, (draft) => {
+                                  draft.modelId = model.id;
+                                })
+                              )
+                            );
                           }}
                         >
                           <div
                             className={cx("check", {
-                              selected: model.id === selectedModel,
+                              selected:
+                                model.id === selectedConnection.value.modelId,
                             })}
                           >
                             <CheckIcon />
@@ -536,16 +535,23 @@ const App = () => {
                         </div>
                       ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <textarea
               className="input"
-              value={instruction}
+              value={selectedConnection.value.description}
               onChange={(event) => {
-                setInstruction(event.target.value);
+                setSelectedConnection(
+                  O.some(
+                    produce(selectedConnection.value, (draft) => {
+                      draft.description = event.target.value;
+                    })
+                  )
+                );
               }}
+              placeholder="What would you like the assistant to know about you?"
             />
 
             <div className="actions">
@@ -564,10 +570,7 @@ const App = () => {
                   socketRef.current.send(
                     JSON.stringify({
                       role: "personalize",
-                      content: {
-                        model: selectedModel,
-                        instruction,
-                      },
+                      content: selectedConnection.value,
                     })
                   );
                 }}
