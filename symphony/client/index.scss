@@ -125,12 +125,12 @@ body {
       padding-left: ms(-2);
       padding-right: ms(-2);
 
-      .messages {
+      .generations {
         display: flex;
         flex-direction: column;
         overflow-y: scroll;
 
-        .message {
+        .generation {
           display: flex;
           flex-direction: row;
           padding: ms(-4);
@@ -150,10 +150,39 @@ body {
             border-radius: ms(-8);
           }
 
-          .content,
-          .function,
-          .json {
-            width: 100%;
+          .content {
+            display: flex;
+            flex-direction: column;
+            gap: ms(-4);
+            white-space: pre-wrap;
+
+            .function {
+              font-size: ms(-1);
+              width: fit-content;
+              color: $neutral-600;
+              display: flex;
+              flex-direction: row;
+              color: $neutral-700;
+
+              .status {
+                padding: 2.75px ms(-6);
+                background: $neutral-300;
+                border-radius: ms(-8) 0 0 ms(-8);
+              }
+
+              .name {
+                padding: 2.75px ms(-6);
+                border-radius: 0 ms(-8) ms(-8) 0;
+                background: $neutral-200;
+              }
+            }
+
+            .json {
+              font-family: "apercu mono", monospace;
+              font-size: ms(-1);
+              color: $neutral-500;
+              margin: 0;
+            }
           }
 
           .editing {
@@ -166,6 +195,22 @@ body {
               display: flex;
               flex-direction: row;
               gap: ms(0);
+
+              .textarea {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+                gap: ms(-4);
+
+                .label {
+                  font-size: ms(-1);
+                  background: $neutral-200;
+                  width: fit-content;
+                  padding: 2.75px ms(-6);
+                  border-radius: ms(-8);
+                  color: $neutral-600;
+                }
+              }
             }
 
             .input {
@@ -233,22 +278,6 @@ body {
                 }
               }
             }
-          }
-
-          .content {
-            white-space: pre-wrap;
-          }
-
-          .function {
-            border-radius: ms(-8);
-          }
-
-          .json {
-            margin: 0;
-            font-family: "apercu mono", monospace;
-            font-size: ms(-1);
-            color: $neutral-500;
-            overflow-x: scroll;
           }
 
           .error {

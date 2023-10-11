@@ -62,7 +62,6 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
       argsRef.current.style.height = argsScrollHeight + "px";
     }
 
-    // Set cursor to the end of the content
     const length = contentRef.current.value.length;
     contentRef.current.setSelectionRange(length, length);
   }, []);
@@ -70,25 +69,33 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
   return (
     <div className="editing">
       <div className="textareas">
-        <textarea
-          className={cx("input")}
-          value={content}
-          onChange={(event) => {
-            setContent(event.target.value);
-          }}
-          ref={contentRef}
-          autoFocus={true}
-        />
-
-        {args && (
+        <div className="textarea">
+          <div className="label">{args ? "Reasoning" : "Output"}</div>
           <textarea
             className={cx("input")}
-            value={args}
+            value={content}
             onChange={(event) => {
-              setArgs(event.target.value);
+              setContent(event.target.value);
             }}
-            ref={argsRef}
+            ref={contentRef}
+            autoFocus={true}
           />
+        </div>
+
+        {args && (
+          <div className="textarea">
+            <div className="label">
+              {decodeFunctionName(generation.message.function_call.name)}
+            </div>
+            <textarea
+              className={cx("input")}
+              value={args}
+              onChange={(event) => {
+                setArgs(event.target.value);
+              }}
+              ref={argsRef}
+            />
+          </div>
         )}
       </div>
 
@@ -167,9 +174,11 @@ const Generation = ({
     message.function_call ? "Request" : "Response"
   );
 
+  const isFunction = message.function_call || message.role === "function";
+
   return (
     <div
-      className={cx("message", { editing: isEditing })}
+      className={cx("generation", { editing: isEditing })}
       onClick={() => {
         if (!isEditing) setIsEditing(true);
       }}
@@ -188,32 +197,39 @@ const Generation = ({
 
       {isEditing ? (
         <EditGeneration {...{ generation, setIsEditing, socketRef }} />
-      ) : message.function_call ? (
-        <div className="function">
-          <div className="name">
-            {`Calling ${decodeFunctionName(message.function_call.name)}`}
-          </div>
-
-          <Suspense>
-            <ErrorBoundary>
-              <Interface props={JSON.parse(message.function_call.arguments)} />
-            </ErrorBoundary>
-          </Suspense>
-        </div>
-      ) : message.role === "function" ? (
-        <div className="function">
-          <div className="name">
-            {`Output of ${decodeFunctionName(message.name)}`}
-          </div>
-
-          <Suspense>
-            <ErrorBoundary>
-              <Interface props={JSON.parse(message.content)} />
-            </ErrorBoundary>
-          </Suspense>
-        </div>
       ) : (
-        <div className="content">{message.content}</div>
+        <div className="content">
+          {!isFunction && message.content}
+
+          {isFunction && (
+            <div className="function">
+              <div className="status">
+                {message.function_call ? "Execute" : "Output"}
+              </div>
+              <div className="name">
+                {decodeFunctionName(
+                  message.function_call
+                    ? message.function_call.name
+                    : message.name
+                )}
+              </div>
+            </div>
+          )}
+
+          {isFunction && (
+            <Suspense>
+              <ErrorBoundary>
+                <Interface
+                  props={JSON.parse(
+                    message.function_call
+                      ? message.function_call.arguments
+                      : message.content
+                  )}
+                />
+              </ErrorBoundary>
+            </Suspense>
+          )}
+        </div>
       )}
     </div>
   );
@@ -309,18 +325,19 @@ const App = () => {
     return () => socket.close();
   }, []);
 
-  const messagesRef = useRef<HTMLDivElement | null>(null);
+  const generationsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (messagesRef.current) {
+    if (generationsRef.current) {
       const observer = new MutationObserver(() => {
         setTimeout(() => {
-          messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+          generationsRef.current.scrollTop =
+            generationsRef.current.scrollHeight;
         }, 25);
       });
 
       const config = { attributes: false, childList: true, subtree: false };
-      observer.observe(messagesRef.current, config);
+      observer.observe(generationsRef.current, config);
 
       return () => observer.disconnect();
     }
@@ -378,7 +395,7 @@ const App = () => {
         </div>
 
         <div className="conversation">
-          <div className="messages" ref={messagesRef}>
+          <div className="generations" ref={generationsRef}>
             {generations.map((generation: Generation) => (
               <Generation
                 key={generation.id}
