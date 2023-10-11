@@ -26,6 +26,8 @@ import axios from "axios";
 import * as AR from "fp-ts/Array";
 import { UUID } from "crypto";
 import * as fs from "fs";
+import { FineTuningJob } from "openai/resources/fine-tuning";
+import { FileObject } from "openai/resources";
 
 dotenv.config();
 
@@ -623,32 +625,36 @@ const machine = createMachine(
               .join("\n");
 
             fs.writeFile(
-              "./symphony/server/data.jsonl",
+              "./symphony/server/training-data.jsonl",
               conversationsJsonl,
               () => {}
             );
 
-            await openai.files
+            return openai.files
               .create({
-                file: fs.createReadStream("./symphony/server/data.jsonl"),
+                file: fs.createReadStream(
+                  "./symphony/server/training-data.jsonl"
+                ),
                 purpose: "fine-tune",
               })
-              .then(async (file) => {
-                await openai.fineTuning.jobs.create({
-                  training_file: file.id,
-                  model: pipe(
-                    context.connections,
-                    getAssistantFromConnections,
-                    getModelIdFromAssistant
-                  ),
-                });
+              .then((file: FileObject) => {
+                return openai.fineTuning.jobs
+                  .create({
+                    training_file: file.id,
+                    model: pipe(
+                      context.connections,
+                      getAssistantFromConnections,
+                      getModelIdFromAssistant
+                    ),
+                  })
+                  .then((job: FineTuningJob) => {
+                    return job;
+                  });
               });
           },
           onDone: {
             target: "idle",
-          },
-          onError: {
-            target: "idle",
+            actions: ["sendFinetuneMessageToClients"],
           },
         },
       },
@@ -740,6 +746,18 @@ const machine = createMachine(
             JSON.stringify({
               role: "restore",
               content: context,
+            })
+          );
+        });
+      },
+      sendFinetuneMessageToClients: (_, event) => {
+        const { data: job } = event;
+
+        wss.clients.forEach((client: WebSocket) => {
+          client.send(
+            JSON.stringify({
+              role: "finetune",
+              content: job,
             })
           );
         });

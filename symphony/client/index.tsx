@@ -2,7 +2,12 @@ import * as React from "react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import * as ReactDOM from "react-dom/client";
 import * as cx from "classnames";
-import { encodeFunctionName, decodeFunctionName } from "../utils/functions";
+import {
+  encodeFunctionName,
+  decodeFunctionName,
+  getAssistantFromConnections,
+  getModelIdFromAssistant,
+} from "../utils/functions";
 import { Connection, Generation } from "../utils/types";
 import "./index.scss";
 import { parseISO, format } from "date-fns";
@@ -226,6 +231,7 @@ const App = () => {
   const [selectedConnection, setSelectedConnection] = useState<
     O.Option<Connection>
   >(O.none);
+  const [finetune, setFinetune] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3001");
@@ -276,6 +282,9 @@ const App = () => {
         setGenerations(generations);
         setModels(models);
         setConnections(connections);
+      } else if (message.role === "finetune") {
+        const { content: job } = message;
+        window.open(`https://platform.openai.com/finetune/${job.id}`, "_blank");
       } else {
         setGenerations((generations: Generation[]) => [
           ...generations,
@@ -328,7 +337,16 @@ const App = () => {
               {connections.map((connection) => (
                 <div
                   key={connection.name}
-                  className="connection"
+                  className={cx("connection", {
+                    selected: pipe(
+                      selectedConnection,
+                      O.map(
+                        (selectedConnection) =>
+                          selectedConnection.name === connection.name
+                      ),
+                      O.getOrElse(() => false)
+                    ),
+                  })}
                   onClick={() => {
                     setSelectedConnection(O.some(connection));
                   }}
@@ -399,12 +417,7 @@ const App = () => {
           <div
             className={cx("finetune")}
             onClick={() => {
-              socketRef.current.send(
-                JSON.stringify({
-                  role: "finetune",
-                  content: "",
-                })
-              );
+              setFinetune(true);
             }}
           >
             <div className="icon">
@@ -576,6 +589,46 @@ const App = () => {
                 }}
               >
                 Save changes
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {finetune && (
+        <div className="alert">
+          <div className="dialog">
+            <div className="content">
+              {`Would you like to fine-tune ${pipe(
+                connections,
+                getAssistantFromConnections,
+                getModelIdFromAssistant
+              )} using ${conversations.length} conversations?`}
+            </div>
+
+            <div className="actions">
+              <div
+                className="discard"
+                onClick={() => {
+                  setFinetune(false);
+                }}
+              >
+                Go Back
+              </div>
+
+              <div
+                className="save"
+                onClick={() => {
+                  socketRef.current.send(
+                    JSON.stringify({
+                      role: "finetune",
+                      content: "",
+                    })
+                  );
+                  setFinetune(false);
+                }}
+              >
+                Confirm
               </div>
             </div>
           </div>

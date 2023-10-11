@@ -12,7 +12,7 @@ export const decodeFunctionName = (name: string): string => {
 };
 
 export const getColor = (): string => {
-  const colors = ["#7A3B13", "#EB5528", "#79D760", "#EB55F7", "#3A063E"];
+  const colors = ["#EB5528", "#79D760", "#EB55F7", "#3A063E"];
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
