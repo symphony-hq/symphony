@@ -53,13 +53,65 @@ body {
         color: $neutral-500;
       }
 
-      .menu {
+      .right {
         display: flex;
-        color: $neutral-400;
-        cursor: pointer;
+        flex-direction: row;
+        gap: ms(0);
 
-        &:hover {
-          color: $neutral-500;
+        .connections {
+          display: flex;
+          flex-direction: row-reverse;
+          gap: ms(-6);
+
+          .connection {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+
+            &.selected {
+              z-index: 999;
+              pointer-events: none;
+            }
+
+            .avatar {
+              width: ms(0);
+              height: ms(0);
+              border-radius: 50%;
+            }
+
+            .name {
+              display: none;
+              position: absolute;
+              font-size: ms(-1);
+              background: $neutral-800;
+              padding: ms(-6) ms(-4);
+              color: $neutral-50;
+              border-radius: ms(-6);
+              top: ms(2);
+              white-space: nowrap;
+              text-transform: capitalize;
+            }
+
+            &:hover {
+              filter: brightness(0.9);
+
+              .name {
+                display: block;
+              }
+            }
+          }
+        }
+
+        .menu {
+          display: flex;
+          color: $neutral-400;
+          cursor: pointer;
+
+          &:hover {
+            color: $neutral-500;
+          }
         }
       }
     }
@@ -68,54 +120,164 @@ body {
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      height: calc(100vh - 48.5px - 75.47px - #{ms(0)});
+      height: calc(100vh - 48.5px - 68.7px - #{ms(0)});
       padding-top: ms(0);
-      padding-left: ms(0);
-      padding-right: ms(0);
+      padding-left: ms(-2);
+      padding-right: ms(-2);
 
-      .messages {
+      .generations {
         display: flex;
         flex-direction: column;
-        gap: ms(-2);
         overflow-y: scroll;
 
-        .message {
+        .generation {
           display: flex;
           flex-direction: row;
+          padding: ms(-4);
           gap: ms(-4);
+          border-radius: ms(-6);
+          cursor: pointer;
+
+          &:hover,
+          &.editing {
+            background: $neutral-100;
+          }
 
           .avatar {
             flex-shrink: 0;
             height: 21px;
             width: 21px;
-            background: $neutral-300;
             border-radius: ms(-8);
-
-            &.user {
-              background: $red;
-            }
-          }
-
-          .content,
-          .function,
-          .json {
-            width: 100%;
           }
 
           .content {
+            display: flex;
+            flex-direction: column;
+            gap: ms(-4);
             white-space: pre-wrap;
+
+            .function {
+              font-size: ms(-1);
+              width: fit-content;
+              color: $neutral-600;
+              display: flex;
+              flex-direction: row;
+              color: $neutral-700;
+
+              .status {
+                padding: 2.75px ms(-6);
+                background: $neutral-300;
+                border-radius: ms(-8) 0 0 ms(-8);
+              }
+
+              .name {
+                padding: 2.75px ms(-6);
+                border-radius: 0 ms(-8) ms(-8) 0;
+                background: $neutral-200;
+              }
+            }
+
+            .json {
+              font-family: "apercu mono", monospace;
+              font-size: ms(-1);
+              color: $neutral-500;
+              margin: 0;
+            }
           }
 
-          .function {
-            border-radius: ms(-8);
-          }
+          .editing {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: ms(-4);
 
-          .json {
-            margin: 0;
-            font-family: "apercu mono", monospace;
-            font-size: ms(-1);
-            color: $neutral-500;
-            overflow-x: scroll;
+            .textareas {
+              display: flex;
+              flex-direction: row;
+              gap: ms(0);
+
+              .textarea {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+                gap: ms(-4);
+
+                .label {
+                  font-size: ms(-1);
+                  background: $neutral-200;
+                  width: fit-content;
+                  padding: 2.75px ms(-6);
+                  border-radius: ms(-8);
+                  color: $neutral-600;
+                }
+              }
+            }
+
+            .input {
+              font-size: ms(0);
+              resize: none;
+              outline: none;
+              border: none;
+              width: 100%;
+              padding: 0;
+              background: transparent;
+              font-family: "apercu mono", monospace;
+              font-size: ms(-1);
+              color: $neutral-500;
+              overflow-y: hidden;
+            }
+
+            .actions {
+              display: flex;
+              flex-direction: row;
+              gap: ms(-4);
+              justify-content: flex-end;
+
+              .line {
+                width: 1px;
+                height: calc(100%);
+                background: $neutral-200;
+              }
+
+              .save,
+              .discard,
+              .delete {
+                font-size: ms(-1);
+                padding: ms(-4) ms(-3);
+                border-radius: ms(-8);
+                cursor: pointer;
+              }
+
+              .save {
+                color: $green-700;
+                background: $green-200;
+
+                &:hover {
+                  color: $green-900;
+                  background: $green-300;
+                }
+              }
+
+              .delete {
+                color: $red-700;
+                background: $red-200;
+
+                &:hover {
+                  color: $red-900;
+                  background: $red-300;
+                }
+              }
+
+              .discard {
+                color: $neutral-700;
+                background: $neutral-200;
+
+                &:hover {
+                  color: $neutral-900;
+                  background: $neutral-300;
+                }
+              }
+            }
           }
 
           .error {
@@ -131,6 +293,7 @@ body {
       flex-direction: row;
       gap: ms(0);
       padding: ms(0);
+      padding-top: ms(-2);
 
       .input {
         flex-grow: 1;
@@ -172,19 +335,14 @@ body {
       position: sticky;
       top: 0;
 
-      .status {
-        width: ms(-2);
-        height: ms(-2);
-        background: $red;
-        border-radius: 50%;
-        transition: background 0.2s ease-in-out;
-        position: relative;
+      .finetune {
         display: flex;
         flex-direction: row;
         align-items: center;
 
-        &.connected {
-          background: $green;
+        .icon {
+          display: flex;
+          cursor: pointer;
         }
 
         .tooltip {
@@ -192,10 +350,11 @@ body {
           position: absolute;
           font-size: ms(-1);
           background: $neutral-600;
-          right: ms(2);
+          right: ms(0) * 3;
           padding: ms(-6) ms(-4);
           color: $neutral-50;
           border-radius: ms(-6);
+          white-space: nowrap;
         }
 
         &:hover {
@@ -221,17 +380,255 @@ body {
         padding: ms(-4);
         border-radius: ms(-6);
 
-        .timestamp {
-          font-size: ms(-1);
-          color: $neutral-400;
+        .top {
+          display: flex;
+          flex-direction: row;
+          gap: ms(-4);
+
+          .timestamp {
+            font-size: ms(-1);
+            color: $neutral-400;
+          }
+
+          .delete {
+            display: flex;
+            color: $neutral-500;
+
+            &:hover {
+              color: $red-500;
+            }
+          }
         }
 
         .content {
           color: $neutral-200;
         }
 
-        &:hover {
+        &:hover,
+        &.selected {
           background: $neutral-800;
+        }
+      }
+    }
+  }
+
+  .personalize {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100vw;
+    height: calc(100dvh - 48px - ms(-2));
+    background: #{$neutral-900}dd;
+    padding-top: calc(48px + ms(-2));
+
+    .connection {
+      display: flex;
+      flex-direction: column;
+      width: ms(13);
+      background-color: $neutral-50;
+      padding: ms(-2);
+      gap: ms(-2);
+      border-radius: ms(-6);
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+
+        .left {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: ms(-4);
+
+          .avatar {
+            width: ms(1);
+            height: ms(1);
+            flex-shrink: 0;
+            border-radius: ms(-8);
+          }
+
+          .name {
+            text-transform: capitalize;
+          }
+        }
+
+        .model {
+          display: flex;
+          color: $neutral-800;
+          border: 1px solid $neutral-200;
+          border-radius: ms(-6);
+          padding: ms(-6);
+          cursor: pointer;
+          position: relative;
+          width: ms(9);
+
+          .choice {
+            font-size: ms(0);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          &:hover {
+            color: $neutral-800;
+          }
+
+          .options {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            top: calc(-#{ms(-2)} - 1px);
+            left: ms(10);
+            background: $neutral-800;
+            padding: ms(-4);
+            border-radius: ms(-6);
+            width: ms(10);
+            font-family: "apercu mono", monospace;
+            height: ms(13);
+            overflow-y: scroll;
+
+            .description {
+              font-size: ms(-1);
+              padding-bottom: ms(-4);
+              color: $neutral-500;
+            }
+
+            .option {
+              padding: ms(-6);
+              border-radius: ms(-8);
+              color: $neutral-200;
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              gap: ms(-6);
+              word-break: break-all;
+
+              .check {
+                display: flex;
+                opacity: 0;
+
+                &.selected {
+                  opacity: 1;
+                  color: $green-500 !important;
+                }
+              }
+
+              &:hover {
+                background: $neutral-700;
+
+                .check {
+                  color: $neutral-500;
+                  opacity: 1;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .input {
+        border: 1px solid $neutral-200;
+        border-radius: ms(-6);
+        outline: none;
+        background: transparent;
+        font-size: ms(0);
+        padding: ms(-6);
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: row;
+        gap: ms(-2);
+        justify-content: flex-end;
+
+        .save,
+        .discard {
+          font-size: ms(-1);
+          padding: ms(-4) ms(-3);
+          border-radius: ms(-8);
+          cursor: pointer;
+        }
+
+        .save {
+          color: $green-700;
+          background: $green-200;
+
+          &:hover {
+            color: $green-900;
+            background: $green-300;
+          }
+        }
+
+        .discard {
+          color: $neutral-700;
+          background: $neutral-200;
+
+          &:hover {
+            color: $neutral-900;
+            background: $neutral-300;
+          }
+        }
+      }
+    }
+  }
+
+  .alert {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: calc(100vw - #{ms(13)});
+    height: calc(100dvh);
+    background: #{$neutral-900}dd;
+
+    .dialog {
+      display: flex;
+      flex-direction: column;
+      gap: ms(-2);
+      background: $neutral-50;
+      border-radius: ms(-6);
+      width: ms(13);
+      padding: ms(-2);
+
+      .actions {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: ms(-2);
+
+        .save,
+        .discard {
+          font-size: ms(-1);
+          padding: ms(-4) ms(-3);
+          border-radius: ms(-8);
+          cursor: pointer;
+        }
+
+        .save {
+          color: $green-700;
+          background: $green-200;
+
+          &:hover {
+            color: $green-900;
+            background: $green-300;
+          }
+        }
+
+        .discard {
+          color: $neutral-700;
+          background: $neutral-200;
+
+          &:hover {
+            color: $neutral-900;
+            background: $neutral-300;
+          }
         }
       }
     }

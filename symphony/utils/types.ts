@@ -10,7 +10,6 @@ export interface Message {
   content: string;
   name?: string;
   function_call?: FunctionCall;
-  timestamp?: string;
 }
 
 export interface Generation {
@@ -18,6 +17,19 @@ export interface Generation {
   conversationId: UUID;
   timestamp: string;
   message: Message;
+}
+
+export interface Connection {
+  name: string;
+  color: string;
+  description: string;
+  modelId: string;
+}
+
+export interface Context {
+  id: UUID;
+  generations: Generation[];
+  connections: Connection[];
 }
 
 export interface Property {
