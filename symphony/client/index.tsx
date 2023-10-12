@@ -293,14 +293,16 @@ const App = () => {
         );
       } else if (message.role === "restore") {
         const { content: context } = message;
-        const { connections, models, generations } = context;
+        const { connections, generations } = context;
         setSelectedConnection(O.none);
         setGenerations(generations);
-        setModels(models);
         setConnections(connections);
       } else if (message.role === "finetune") {
         const { content: job } = message;
         window.open(`https://platform.openai.com/finetune/${job.id}`, "_blank");
+      } else if (message.role === "models") {
+        const { content: models } = message;
+        setModels(models);
       } else {
         setGenerations((generations: Generation[]) => [
           ...generations,
@@ -342,6 +344,17 @@ const App = () => {
       return () => observer.disconnect();
     }
   }, []);
+
+  useEffect(() => {
+    if (O.isSome(selectedConnection)) {
+      socketRef.current.send(
+        JSON.stringify({
+          role: "models",
+          content: "",
+        })
+      );
+    }
+  }, [selectedConnection]);
 
   return (
     <div className="window">

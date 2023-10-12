@@ -64,7 +64,6 @@ const machine = createMachine(
     context: {
       id: id(),
       generations: [],
-      models: [],
       connections: [
         {
           name: "assistant",
@@ -101,6 +100,7 @@ const machine = createMachine(
               ];
             }),
             "receiveUserMessageFromClient",
+            "sendHistoryToClients",
           ],
         },
         {
@@ -108,8 +108,9 @@ const machine = createMachine(
           cond: (_, event) => event.data.role === "restore",
         },
         {
-          target: "history",
+          target: "idle",
           cond: (_, event) => event.data.role === "history",
+          actions: ["sendHistoryToClients"],
         },
         {
           target: "new",
@@ -130,6 +131,11 @@ const machine = createMachine(
         {
           target: "finetune",
           cond: (_, event) => event.data.role === "finetune",
+        },
+        {
+          target: "idle",
+          cond: (_, event) => event.data.role === "models",
+          actions: ["sendModelsToClients"],
         },
         {
           target: "idle",
@@ -345,21 +351,8 @@ const machine = createMachine(
       },
       restore: {
         invoke: {
-          src: async () => {
-            const { data: models } = await openai.models.list();
-            return models;
-          },
+          src: async () => {},
           onDone: {
-            target: "idle",
-            actions: [
-              assign((context, event) => {
-                const { data: models } = event;
-                context.models = models;
-              }),
-              "sendContextToClients",
-            ],
-          },
-          onError: {
             target: "idle",
             actions: ["sendContextToClients"],
           },
@@ -389,57 +382,6 @@ const machine = createMachine(
                 context.generations = generations;
               }),
               "sendConversationToClients",
-            ],
-          },
-        },
-      },
-      history: {
-        invoke: {
-          src: async () => {
-            const { data: generations } = await axios.get(
-              `${DATABASE_ENDPOINT}/generations?order=timestamp`
-            );
-
-            return generations;
-          },
-          onDone: {
-            target: "idle",
-            actions: [
-              (_, event) => {
-                const { data: generations } = event;
-
-                const history = pipe(
-                  generations,
-                  AR.map((generation: Generation) => generation.conversationId),
-                  AR.uniq(S.Eq),
-                  AR.map((conversationId) =>
-                    pipe(
-                      generations,
-                      AR.filter(
-                        (generation: Generation) =>
-                          generation.conversationId === conversationId
-                      ),
-                      AR.head,
-                      O.map(({ conversationId, message, timestamp }) => ({
-                        id: conversationId,
-                        timestamp,
-                        message,
-                      })),
-                      O.toUndefined
-                    )
-                  ),
-                  AR.reverse
-                );
-
-                wss.clients.forEach((client: WebSocket) => {
-                  client.send(
-                    JSON.stringify({
-                      role: "history",
-                      content: history,
-                    })
-                  );
-                });
-              },
             ],
           },
         },
@@ -758,6 +700,55 @@ const machine = createMachine(
             JSON.stringify({
               role: "finetune",
               content: job,
+            })
+          );
+        });
+      },
+      sendHistoryToClients: async () => {
+        const { data: generations } = await axios.get(
+          `${DATABASE_ENDPOINT}/generations?order=timestamp`
+        );
+
+        const history = pipe(
+          generations,
+          AR.map((generation: Generation) => generation.conversationId),
+          AR.uniq(S.Eq),
+          AR.map((conversationId) =>
+            pipe(
+              generations,
+              AR.filter(
+                (generation: Generation) =>
+                  generation.conversationId === conversationId
+              ),
+              AR.head,
+              O.map(({ conversationId, message, timestamp }) => ({
+                id: conversationId,
+                timestamp,
+                message,
+              })),
+              O.toUndefined
+            )
+          ),
+          AR.reverse
+        );
+
+        wss.clients.forEach((client: WebSocket) => {
+          client.send(
+            JSON.stringify({
+              role: "history",
+              content: history,
+            })
+          );
+        });
+      },
+      sendModelsToClients: async () => {
+        const { data: models } = await openai.models.list();
+
+        wss.clients.forEach((client: WebSocket) => {
+          client.send(
+            JSON.stringify({
+              role: "models",
+              content: models,
             })
           );
         });
