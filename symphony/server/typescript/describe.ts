@@ -2,6 +2,32 @@ import * as ts from "typescript";
 import * as fs from "fs";
 import { Properties } from "../../utils/types";
 
+const template = `/**
+ * name: Name of person
+ */
+interface SymphonyRequest {
+  name: string;
+}
+
+/**
+ * greeting: Greeting with name of person
+ */
+interface SymphonyResponse {
+  greeting: string;
+}
+
+/**
+ * Greet person by name
+ */
+export default function handler(request: SymphonyRequest): SymphonyResponse {
+  const { name } = request;
+
+  return {
+    greeting: \`Hello \${name}\`,
+  };
+}
+`;
+
 const FUNCTIONS_DIRECTORY = "./functions";
 
 interface Parameters {
@@ -134,8 +160,16 @@ const readFiles = new Promise((resolve, reject) => {
           true
         );
 
-        const schema = generateSchema(sourceFile, fileName);
-        schemas.push(schema);
+        if (sourceFile.statements.length === 0) {
+          fs.writeFileSync(
+            `${FUNCTIONS_DIRECTORY}/${fileName}`,
+            template,
+            "utf8"
+          );
+        } else {
+          const schema = generateSchema(sourceFile, fileName);
+          schemas.push(schema);
+        }
       });
 
     resolve(schemas);
