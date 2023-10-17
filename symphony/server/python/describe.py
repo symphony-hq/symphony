@@ -6,6 +6,34 @@ import sys
 
 sys.path.insert(0, os.path.abspath('functions'))
 
+template = """import sys
+import json
+from pydantic import BaseModel, Field
+
+
+class SymphonyRequest(BaseModel):
+    name: str = Field(description="Name of person")
+
+
+class SymphonyResponse(BaseModel):
+    greeting: str = Field(description="Greeting with name of person")
+
+
+def handler(request: SymphonyRequest) -> SymphonyResponse:
+    \"""
+     Greet person by name
+    \"""
+
+    return SymphonyResponse(name=request.name)
+
+
+if __name__ == "__main__":
+    args = json.loads(sys.argv[1])
+    request = SymphonyRequest(**args)
+    response = handler(request)
+    print(response.json())
+"""
+
 
 def remove_title(schema):
     if 'title' in schema:
@@ -41,6 +69,10 @@ def main(directory):
 
     for filename in os.listdir(directory):
         if filename.endswith('.py'):
+            with open(os.path.join(directory, filename), 'r+') as file:
+                if file.read().strip() == '':
+                    file.write(template)
+
             module_name = filename[:-3]
             module = __import__(f'{module_name}')
             function = getattr(module, 'handler')
