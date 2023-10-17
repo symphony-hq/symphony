@@ -155,6 +155,7 @@ body {
             flex-direction: column;
             gap: ms(-4);
             white-space: pre-wrap;
+            word-break: break-word;
 
             .function {
               font-size: ms(-1);
@@ -402,6 +403,7 @@ body {
 
         .content {
           color: $neutral-200;
+          word-break: break-word;
         }
 
         &:hover,
