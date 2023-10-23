@@ -1,4 +1,4 @@
-![symphony preview](https://github.com/symphony-hq/symphony/assets/17938322/efda7e04-be74-4205-8784-d7900e7ee0a6)
+![symphony preview](https://github.com/symphony-hq/symphony/assets/17938322/5aa7b5ee-79de-4fd7-a793-368c1a453b12)
 
 ## Getting Started
 Visit https://symphony.run/docs to get started with Symphony.
