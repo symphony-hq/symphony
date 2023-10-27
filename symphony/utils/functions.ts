@@ -16,6 +16,8 @@ export const getColor = (): string => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
+export const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export const getAssistantFromConnections = (
   connections: Connection[]
 ): O.Option<Connection> =>

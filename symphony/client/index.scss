@@ -34,6 +34,23 @@ body {
   width: 100vw;
   height: 100dvh;
 
+  .sidebar {
+    background: $neutral-900;
+
+    .button {
+      display: flex;
+      padding: ms(0);
+      color: $neutral-600;
+      cursor: pointer;
+
+      &:hover,
+      &.selected {
+        color: $neutral-400;
+        background: $neutral-800;
+      }
+    }
+  }
+
   .page {
     height: 100%;
     display: flex;

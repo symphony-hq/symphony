@@ -17,12 +17,15 @@ import {
   TrashIcon,
   GoalIcon,
   CheckIcon,
+  AccessibilityIcon,
+  CommentIcon,
 } from "@primer/octicons-react";
 import { pipe } from "fp-ts/lib/function";
 import * as AR from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import { produce } from "immer";
 import { Model } from "openai/resources";
+import Memory from "./components/memory";
 
 const interfaceCache = {};
 
@@ -356,89 +359,120 @@ const App = () => {
     }
   }, [selectedConnection]);
 
+  const [tab, setTab] = useState("chat");
+
   return (
     <div className="window">
-      <div className="page">
-        <div className="navigation">
-          <div className="name">Symphony</div>
-
-          <div className="right">
-            <div className="connections">
-              {connections.map((connection) => (
-                <div
-                  key={connection.name}
-                  className={cx("connection", {
-                    selected: pipe(
-                      selectedConnection,
-                      O.map(
-                        (selectedConnection) =>
-                          selectedConnection.name === connection.name
-                      ),
-                      O.getOrElse(() => false)
-                    ),
-                  })}
-                  onClick={() => {
-                    setSelectedConnection(O.some(connection));
-                  }}
-                >
-                  <div
-                    className="avatar"
-                    style={{ backgroundColor: connection.color }}
-                  />
-                  <div className="name">{connection.name}</div>
-                </div>
-              ))}
-            </div>
-
-            <div
-              className="menu"
-              onClick={() => {
-                setIsHistoryVisible(!isHistoryVisible);
-                socketRef.current.send(
-                  JSON.stringify({
-                    role: "history",
-                    content: "",
-                  })
-                );
-              }}
-            >
-              {isHistoryVisible ? <XIcon /> : <ThreeBarsIcon />}
-            </div>
-          </div>
+      <div className="sidebar">
+        <div
+          className={cx("button", { selected: tab === "chat" })}
+          onClick={() => {
+            setTab("chat");
+          }}
+        >
+          <CommentIcon />
         </div>
-
-        <div className="conversation">
-          <div className="generations" ref={generationsRef}>
-            {generations.map((generation: Generation) => (
-              <Generation
-                key={generation.id}
-                {...{ generation, socketRef, connections }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="controls">
-          <input
-            className="input"
-            placeholder="Send a message"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                const message = {
-                  role: "user",
-                  content: (event.target as HTMLInputElement).value,
-                };
-
-                socketRef.current.send(JSON.stringify(message));
-
-                setTimeout(() => {
-                  (event.target as HTMLInputElement).value = "";
-                }, 10);
-              }
-            }}
-          />
+        <div
+          className={cx("button", { selected: tab === "memory" })}
+          onClick={() => {
+            setTab("memory");
+          }}
+        >
+          <AccessibilityIcon />
         </div>
       </div>
+
+      {tab === "memory" ? (
+        <div className="page">
+          <div className="navigation">
+            <div className="name">Memory</div>
+          </div>
+
+          <Memory />
+        </div>
+      ) : (
+        <div className="page">
+          <div className="navigation">
+            <div className="name">Chat</div>
+
+            <div className="right">
+              <div className="connections">
+                {connections.map((connection) => (
+                  <div
+                    key={connection.name}
+                    className={cx("connection", {
+                      selected: pipe(
+                        selectedConnection,
+                        O.map(
+                          (selectedConnection) =>
+                            selectedConnection.name === connection.name
+                        ),
+                        O.getOrElse(() => false)
+                      ),
+                    })}
+                    onClick={() => {
+                      setSelectedConnection(O.some(connection));
+                    }}
+                  >
+                    <div
+                      className="avatar"
+                      style={{ backgroundColor: connection.color }}
+                    />
+                    <div className="name">{connection.name}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="menu"
+                onClick={() => {
+                  setIsHistoryVisible(!isHistoryVisible);
+                  socketRef.current.send(
+                    JSON.stringify({
+                      role: "history",
+                      content: "",
+                    })
+                  );
+                }}
+              >
+                {isHistoryVisible ? <XIcon /> : <ThreeBarsIcon />}
+              </div>
+            </div>
+          </div>
+
+          <div className="conversation">
+            <div className="generations" ref={generationsRef}>
+              {generations.map((generation: Generation) => (
+                <Generation
+                  key={generation.id}
+                  {...{ generation, socketRef, connections }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="controls">
+            <input
+              className="input"
+              placeholder="Send a message"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  const message = {
+                    role: "user",
+                    content: (event.target as HTMLInputElement).value,
+                  };
+
+                  socketRef.current.send(JSON.stringify(message));
+
+                  setTimeout(() => {
+                    (event.target as HTMLInputElement).value = "";
+                  }, 10);
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className={cx("history", { visible: isHistoryVisible })}>
         <div className="bar">
