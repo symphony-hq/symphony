@@ -1,0 +1,25 @@
+@import "../node_modules/modularscale-sass/stylesheets/modularscale";
+@import "../symphony/client/colors.scss";
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  padding: ms(0);
+  gap: ms(-6);
+
+  .message {
+    display: flex;
+    flex-direction: row;
+    gap: ms(-2);
+    align-items: center;
+    color: $neutral-500;
+
+    .icon {
+      color: $neutral-300;
+    }
+
+    .content {
+      font-size: ms(0);
+    }
+  }
+}

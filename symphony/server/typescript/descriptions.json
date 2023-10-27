@@ -64,5 +64,35 @@
         "value"
       ]
     }
+  },
+  {
+    "name": "searchHistory-ts",
+    "description": "Perform search to retrieve history of past messages",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Query to use for vector search"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    },
+    "returns": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": ""
+          }
+        }
+      },
+      "required": [
+        "messages"
+      ]
+    }
   }
 ]

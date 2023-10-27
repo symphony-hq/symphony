@@ -27,7 +27,7 @@ import * as AR from "fp-ts/Array";
 import { UUID } from "crypto";
 import * as fs from "fs";
 import { FineTuningJob } from "openai/resources/fine-tuning";
-import { FileObject } from "openai/resources";
+import { Embedding, FileObject } from "openai/resources";
 
 dotenv.config();
 
@@ -624,6 +624,21 @@ const machine = createMachine(
             `${DATABASE_ENDPOINT}/generations`,
             recentUserGeneration.value
           );
+
+          const { data: embeddings } = await openai.embeddings.create({
+            input: recentUserGeneration.value.message.content,
+            model: "text-embedding-ada-002",
+          });
+
+          await axios.post(`${DATABASE_ENDPOINT}/embeddings`, {
+            embedding: pipe(
+              embeddings,
+              AR.head,
+              O.map((embedding: Embedding) => embedding.embedding),
+              O.toUndefined
+            ),
+            generationId: recentUserGeneration.value.id,
+          });
         }
       },
       sendAssistantMessageToClients: async (context) => {

@@ -39,3 +39,32 @@ grant all on public.generations to anon;
 
 # Execute SQL commands
 psql -h $DB_HOST -p $DB_PORT -d $DB_NAME -c "$SQL_COMMANDS"
+
+# CREATE OR REPLACE FUNCTION "match_embeddings" (
+#   "query" vector(1536),
+#   "threshold" float,
+#   "count" int
+# )
+# RETURNS TABLE (
+#   "id" uuid,
+#   "message" json,
+#   "similarity" float
+# )
+# LANGUAGE SQL STABLE
+# AS $$
+#   SELECT
+#     "embeddings"."id",
+#     "generations"."message",
+#     1 - ("embeddings"."embedding" <=> "query") AS "similarity"
+#   FROM "embeddings"
+#   JOIN "generations" ON "embeddings"."generationId" = "generations"."id"
+#   WHERE 1 - ("embeddings"."embedding" <=> "query") > "threshold"
+#   ORDER BY "similarity" DESC
+#   LIMIT "count";
+# $$;
+
+# create table embeddings (
+#   id uuid not null default gen_random_uuid() primary key,
+#   generationId uuid not null,
+#   embedding vector(1536)
+# );
