@@ -24,14 +24,8 @@ def handler(request: SymphonyRequest) -> SymphonyResponse:
      Greet person by name
     \"""
 
-    return SymphonyResponse(name=request.name)
-
-
-if __name__ == "__main__":
-    args = json.loads(sys.argv[1])
-    request = SymphonyRequest(**args)
-    response = handler(request)
-    print(response.json())
+    return SymphonyResponse(
+        greeting='Hello {name}'.format(name=request['name']))
 """
 
 

@@ -1,34 +1,29 @@
 [
     {
-        "name": "getCoordinates-py",
-        "description": "Get latitude and longitude from IP address",
+        "name": "hello-py",
+        "description": "Greet person by name",
         "parameters": {
             "type": "object",
             "properties": {
-                "ipAddress": {
-                    "description": "The IP address; Use 'me' to get own IP address",
+                "name": {
+                    "description": "Name of person",
                     "type": "string"
                 }
             },
             "required": [
-                "ipAddress"
+                "name"
             ]
         },
         "returns": {
             "type": "object",
             "properties": {
-                "lat": {
-                    "description": "The latitude of IP address",
-                    "type": "number"
-                },
-                "lng": {
-                    "description": "The longitude of IP address",
-                    "type": "number"
+                "greeting": {
+                    "description": "Greeting with name of person",
+                    "type": "string"
                 }
             },
             "required": [
-                "lat",
-                "lng"
+                "greeting"
             ]
         }
     }

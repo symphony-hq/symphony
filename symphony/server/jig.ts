@@ -100,4 +100,26 @@ function createInterfaces() {
   );
 }
 
+const removeInterfaces = () => {
+  const interfacesDir = "./interfaces";
+
+  const namesFromDescriptions = [
+    ...pythonDescriptions,
+    ...typescriptDescriptions,
+  ].map(({ name }) => name);
+
+  fs.readdir(interfacesDir, (err, interfaceFiles) => {
+    if (err) throw err;
+
+    interfaceFiles.forEach((interfaceFile) => {
+      const name = interfaceFile.split(".")[0];
+      if (!namesFromDescriptions.includes(name)) {
+        console.log(name);
+        fs.unlinkSync(`${interfacesDir}/${interfaceFile}`);
+      }
+    });
+  });
+};
+
 createInterfaces();
+removeInterfaces();

@@ -19,13 +19,13 @@ interface SymphonyResponse {
 /**
  * Greet person by name
  */
-export default function handler(request: SymphonyRequest): SymphonyResponse {
+export const handler = (request: SymphonyRequest): SymphonyResponse => {
   const { name } = request;
 
   return {
     greeting: \`Hello \${name}\`,
   };
-}
+};
 `;
 
 const FUNCTIONS_DIRECTORY = "./functions";
