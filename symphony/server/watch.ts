@@ -31,7 +31,7 @@ typescriptWatcher
 
 const generateInterfaces = () => {
   if (process) process.kill();
-  process = exec("node -r @swc-node/register symphony/server/jig.ts");
+  process = exec("yarn nps jig");
 };
 
 const descriptionsWatcher = chokidar.watch(
@@ -40,6 +40,4 @@ const descriptionsWatcher = chokidar.watch(
 
 descriptionsWatcher
   .on("ready", generateInterfaces)
-  .on("add", generateInterfaces)
-  .on("change", generateInterfaces)
-  .on("unlink", generateInterfaces);
+  .on("change", generateInterfaces);

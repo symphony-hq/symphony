@@ -43,3 +43,10 @@ export interface Property {
 export interface Properties {
   [key: string]: Property;
 }
+
+export interface Descriptions {
+  name: string;
+  description?: string;
+  parameters?: Properties;
+  returns?: Properties;
+}

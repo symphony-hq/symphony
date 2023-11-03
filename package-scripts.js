@@ -30,16 +30,18 @@ module.exports = {
       py: "source venv/bin/activate && python symphony/server/python/serve.py",
       all: npsUtils.concurrent.nps("serve.ts", "serve.py"),
     },
+    jig: "node -r @swc-node/register symphony/server/jig.ts",
     watch: "node -r @swc-node/register symphony/server/watch.ts",
     client: "yarn vite --port 3000",
     service: "node -r @swc-node/register symphony/server/service.ts",
     database: "postgrest symphony/database/postgrest.conf",
     start: npsUtils.concurrent.nps(
-      "watch",
       "client",
       "service",
       "database",
-      "serve.all"
+      "serve.all",
+      "jig",
+      "watch"
     ),
     lint: "eslint .",
     clean: {
