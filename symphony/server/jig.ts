@@ -1,10 +1,8 @@
-import * as pythonDescriptions from "./python/descriptions.json";
-import * as typescriptDescriptions from "./typescript/descriptions.json";
 import { pipe } from "fp-ts/lib/function";
 import * as RAR from "fp-ts/ReadonlyArray";
 import * as fs from "fs";
 import { Project } from "ts-morph";
-import { Property } from "../utils/types";
+import { Descriptions, Property } from "../utils/types";
 
 const interfaceToProperty = {
   Request: "parameters",
@@ -21,9 +19,9 @@ const getTypeFromProperty = (property: Property) => {
   }
 };
 
-function createInterfaces() {
+function createInterfaces({ descriptions }: { descriptions: Descriptions[] }) {
   pipe(
-    [...pythonDescriptions, ...typescriptDescriptions],
+    descriptions,
     RAR.map((fx) => {
       const { name } = fx;
       const filePath = `./interfaces/${name}.tsx`;
@@ -100,4 +98,46 @@ function createInterfaces() {
   );
 }
 
-createInterfaces();
+const removeInterfaces = ({
+  descriptions,
+}: {
+  descriptions: Descriptions[];
+}) => {
+  const interfacesDir = "./interfaces";
+
+  const namesFromDescriptions = descriptions.map(({ name }) => name);
+
+  fs.readdir(interfacesDir, (err, interfaceFiles) => {
+    if (err) throw err;
+
+    interfaceFiles.forEach((interfaceFile) => {
+      const name = interfaceFile.split(".")[0];
+      if (!namesFromDescriptions.includes(name)) {
+        fs.unlinkSync(`${interfacesDir}/${interfaceFile}`);
+      }
+    });
+  });
+};
+
+const refreshInterfaces = () => {
+  let descriptions = [];
+
+  try {
+    const pythonFunctions = JSON.parse(
+      fs.readFileSync("./symphony/server/python/descriptions.json", "utf8")
+    );
+
+    const typescriptFunctions = JSON.parse(
+      fs.readFileSync("./symphony/server/typescript/descriptions.json", "utf8")
+    );
+
+    descriptions = [...pythonFunctions, ...typescriptFunctions];
+  } catch (error) {
+    // TODO: Handle error
+  }
+
+  removeInterfaces({ descriptions });
+  createInterfaces({ descriptions });
+};
+
+refreshInterfaces();

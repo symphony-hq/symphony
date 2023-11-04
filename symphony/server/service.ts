@@ -3,12 +3,9 @@ import { createServer } from "http";
 import { createMachine, interpret, EventObject } from "xstate";
 import { assign } from "@xstate/immer";
 import OpenAI from "openai";
-import * as typescriptFunctions from "./typescript/descriptions.json";
-import * as pythonFunctions from "./python/descriptions.json";
 import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/Option";
 import * as dotenv from "dotenv";
-import { exec } from "child_process";
 import {
   decodeFunctionName,
   encodeFunctionName,
@@ -18,6 +15,7 @@ import {
   getSystemDescription,
   getUserFromConnections,
   getDescriptionFromConnection,
+  getNameFromFunction,
 } from "../utils/functions";
 import { Generation, Message, Context } from "../utils/types";
 import { v4 as id } from "uuid";
@@ -190,67 +188,39 @@ const machine = createMachine(
                 const name = decodeFunctionName(functionCall.value.name);
                 const args = JSON.parse(functionCall.value.arguments);
 
-                if (name.includes(".ts")) {
-                  import(`../../functions/${name}`)
-                    .then(async (module) => {
-                      const result = await module.default(args);
+                axios
+                  .post(
+                    `${
+                      name.includes(".ts")
+                        ? "http://localhost:3003"
+                        : name.includes(".py")
+                        ? `http://0.0.0.0:3004`
+                        : ""
+                    }/${getNameFromFunction(name)}`,
+                    args
+                  )
+                  .then((response) => {
+                    const { data } = response;
 
-                      const message = {
-                        role: "function",
-                        name: encodeFunctionName(name),
-                        content: JSON.stringify(result),
-                      };
+                    const message = {
+                      role: "function",
+                      name: encodeFunctionName(name),
+                      content: JSON.stringify(data),
+                    };
 
-                      resolve(message);
-                    })
-                    .catch((error) => {
-                      console.error(`Failed to load function ${name}:`, error);
+                    resolve(message);
+                  })
+                  .catch((error) => {
+                    const message = {
+                      role: "function",
+                      name: encodeFunctionName(name),
+                      content: JSON.stringify({
+                        errorMessage: error.message,
+                      }),
+                    };
 
-                      const message = {
-                        role: "function",
-                        name: encodeFunctionName(name),
-                        content: JSON.stringify({
-                          errorMessage: error.message,
-                        }),
-                      };
-
-                      resolve(message);
-                    });
-                } else if (name.includes(".py")) {
-                  const pythonInterpreterPath = "venv/bin/python3";
-                  const pythonScriptPath = `functions/${name}`;
-                  const argsString = JSON.stringify(args);
-
-                  exec(
-                    `${pythonInterpreterPath} ${pythonScriptPath} '${argsString}'`,
-                    (error, stdout) => {
-                      if (error) {
-                        console.error(
-                          `Failed to execute python script ${name}:`,
-                          error
-                        );
-
-                        const message = {
-                          role: "function",
-                          name: encodeFunctionName(name),
-                          content: JSON.stringify({
-                            errorMessage: error.message,
-                          }),
-                        };
-
-                        resolve(message);
-                      } else {
-                        const message = {
-                          role: "function",
-                          name: encodeFunctionName(name),
-                          content: stdout,
-                        };
-
-                        resolve(message);
-                      }
-                    }
-                  );
-                }
+                    resolve(message);
+                  });
               } else {
                 resolve(null);
               }
@@ -280,8 +250,22 @@ const machine = createMachine(
       },
       gpt4: {
         invoke: {
-          src: (context, event) =>
-            openai.chat.completions.create({
+          src: (context, event) => {
+            const pythonFunctions = JSON.parse(
+              fs.readFileSync(
+                "./symphony/server/python/descriptions.json",
+                "utf8"
+              )
+            );
+
+            const typescriptFunctions = JSON.parse(
+              fs.readFileSync(
+                "./symphony/server/typescript/descriptions.json",
+                "utf8"
+              )
+            );
+
+            return openai.chat.completions.create({
               messages: [
                 {
                   role: "system",
@@ -307,7 +291,8 @@ const machine = createMachine(
                 getModelIdFromAssistant
               ),
               functions: [...typescriptFunctions, ...pythonFunctions],
-            }),
+            });
+          },
           onDone: {
             target: "function",
             actions: [

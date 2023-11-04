@@ -19,13 +19,13 @@ interface SymphonyResponse {
 /**
  * Greet person by name
  */
-export default function handler(request: SymphonyRequest): SymphonyResponse {
+export const handler = (request: SymphonyRequest): SymphonyResponse => {
   const { name } = request;
 
   return {
     greeting: \`Hello \${name}\`,
   };
-}
+};
 `;
 
 const FUNCTIONS_DIRECTORY = "./functions";
@@ -137,50 +137,54 @@ function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
   return schema;
 }
 
-const readFiles = new Promise((resolve, reject) => {
-  const schemas = [] as Schema[];
+const describe = () => {
+  const readFiles = new Promise((resolve, reject) => {
+    const schemas = [] as Schema[];
 
-  fs.readdir(FUNCTIONS_DIRECTORY, (error, files) => {
-    if (error) {
-      reject(error);
-    }
+    fs.readdir(FUNCTIONS_DIRECTORY, (error, files) => {
+      if (error) {
+        reject(error);
+      }
 
-    files
-      .filter((fileName) => fileName.endsWith(".ts"))
-      .forEach((fileName) => {
-        const content = fs.readFileSync(
-          `${FUNCTIONS_DIRECTORY}/${fileName}`,
-          "utf8"
-        );
-
-        const sourceFile = ts.createSourceFile(
-          "temp.ts",
-          content,
-          ts.ScriptTarget.Latest,
-          true
-        );
-
-        if (sourceFile.statements.length === 0) {
-          fs.writeFileSync(
+      files
+        .filter((fileName) => fileName.endsWith(".ts"))
+        .forEach((fileName) => {
+          const content = fs.readFileSync(
             `${FUNCTIONS_DIRECTORY}/${fileName}`,
-            template,
             "utf8"
           );
-        } else {
-          const schema = generateSchema(sourceFile, fileName);
-          schemas.push(schema);
-        }
-      });
 
-    resolve(schemas);
+          const sourceFile = ts.createSourceFile(
+            "temp.ts",
+            content,
+            ts.ScriptTarget.Latest,
+            true
+          );
+
+          if (sourceFile.statements.length === 0) {
+            fs.writeFileSync(
+              `${FUNCTIONS_DIRECTORY}/${fileName}`,
+              template,
+              "utf8"
+            );
+          } else {
+            const schema = generateSchema(sourceFile, fileName);
+            schemas.push(schema);
+          }
+        });
+
+      resolve(schemas);
+    });
   });
-});
 
-readFiles
-  .then((metadatas) => {
-    fs.writeFileSync(
-      "./symphony/server/typescript/descriptions.json",
-      JSON.stringify(metadatas, null, 2)
-    );
-  })
-  .catch((error) => console.log(error));
+  readFiles
+    .then((metadatas) => {
+      fs.writeFileSync(
+        "./symphony/server/typescript/descriptions.json",
+        JSON.stringify(metadatas, null, 2)
+      );
+    })
+    .catch((error) => console.log(error));
+};
+
+describe();

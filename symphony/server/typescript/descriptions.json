@@ -1,7 +1,7 @@
 [
   {
     "name": "getWeather-ts",
-    "description": "Gets temperature of a city",
+    "description": "",
     "parameters": {
       "type": "object",
       "properties": {
@@ -39,7 +39,7 @@
   },
   {
     "name": "kelvinToCelsius-ts",
-    "description": "Converts Kelvin to Celsius",
+    "description": "",
     "parameters": {
       "type": "object",
       "properties": {

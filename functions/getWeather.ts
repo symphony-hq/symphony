@@ -21,9 +21,9 @@ interface SymphonyResponse {
 /**
  * Gets temperature of a city
  */
-export default async function handler(
+export const handler = async (
   request: SymphonyRequest
-): Promise<SymphonyResponse> {
+): Promise<SymphonyResponse> => {
   const { lat, lon } = request;
 
   const result = await axios
@@ -38,4 +38,4 @@ export default async function handler(
     temperature: result.main.temp,
     unit: "Kelvin",
   };
-}
+};

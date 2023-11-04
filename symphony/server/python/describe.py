@@ -1,8 +1,8 @@
 import os
+import sys
 import json
 from pydantic import BaseModel
 from typing import Any, Callable, Type
-import sys
 
 sys.path.insert(0, os.path.abspath('functions'))
 
@@ -24,14 +24,8 @@ def handler(request: SymphonyRequest) -> SymphonyResponse:
      Greet person by name
     \"""
 
-    return SymphonyResponse(name=request.name)
-
-
-if __name__ == "__main__":
-    args = json.loads(sys.argv[1])
-    request = SymphonyRequest(**args)
-    response = handler(request)
-    print(response.json())
+    return SymphonyResponse(
+        greeting='Hello {name}'.format(name=request['name']))
 """
 
 
@@ -64,12 +58,12 @@ def generate_function_description(name, function: Callable[..., Any], request_mo
     return function_description
 
 
-def main(directory):
+def describe():
     descriptions = []
 
-    for filename in os.listdir(directory):
+    for filename in os.listdir('functions'):
         if filename.endswith('.py'):
-            with open(os.path.join(directory, filename), 'r+') as file:
+            with open(os.path.join('functions', filename), 'r+') as file:
                 if file.read().strip() == '':
                     file.write(template)
 
@@ -83,10 +77,9 @@ def main(directory):
                 fn_name, function, symphony_request, symphony_response)
             descriptions.append(description)
 
-    with open('./symphony/server/python/descriptions.json', 'w') as f:
-        json.dump(descriptions, f, indent=4)
+    with open('./symphony/server/python/descriptions.json', 'w') as file:
+        json.dump(descriptions, file, indent=4)
 
 
-if __name__ == '__main__':
-    directory = 'functions'
-    main(directory)
+if __name__ == "__main__":
+    describe()

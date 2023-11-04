@@ -19,16 +19,9 @@ def handler(request: SymphonyRequest) -> SymphonyResponse:
     """
     Get latitude and longitude from IP address
     """
-    ipAddress = request.ipAddress
+    ipAddress = request['ipAddress']
 
     g = geocoder.ip(ipAddress)
     lat, lng = g.latlng
 
     return SymphonyResponse(lat=lat, lng=lng)
-
-
-if __name__ == "__main__":
-    args = json.loads(sys.argv[1])
-    request = SymphonyRequest(**args)
-    response = handler(request)
-    print(response.json())

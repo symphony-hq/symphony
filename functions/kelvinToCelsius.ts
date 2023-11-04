@@ -15,12 +15,12 @@ interface SymphonyResponse {
 /**
  * Converts Kelvin to Celsius
  */
-export default async function handler(
+export const handler = async (
   request: SymphonyRequest
-): Promise<SymphonyResponse> {
+): Promise<SymphonyResponse> => {
   const { value } = request;
 
   return {
     value: Math.round(value - 273.15),
   };
-}
+};

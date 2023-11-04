@@ -11,6 +11,10 @@ export const decodeFunctionName = (name: string): string => {
   return name.replace("-", ".");
 };
 
+export const getNameFromFunction = (name: string): string => {
+  return name.slice(0, -3);
+};
+
 export const getColor = (): string => {
   const colors = ["#EB5528", "#79D760", "#EB55F7", "#3A063E"];
   return colors[Math.floor(Math.random() * colors.length)];

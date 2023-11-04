@@ -7,3 +7,4 @@ yarn-debug.log*
 yarn-error.log*
 __pycache__/
 training-data.jsonl
+symphony/*.js
