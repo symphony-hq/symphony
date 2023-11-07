@@ -8,7 +8,7 @@ import {
   getAssistantFromConnections,
   getModelIdFromAssistant,
 } from "../utils/functions";
-import { Connection, Generation } from "../utils/types";
+import { Connection, Generation, Tool } from "../utils/types";
 import "./index.scss";
 import { parseISO, format } from "date-fns";
 import {
@@ -46,7 +46,7 @@ const getInterface = (name: string, type: string) => {
 
 const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
   const [content, setContent] = useState(generation.message.content);
-  const [args, setArgs] = useState(generation.message.function_call?.arguments);
+  const [tools, setTools] = useState(generation.message.tool_calls);
 
   const contentRef = useRef(null);
   const argsRef = useRef(null);
@@ -70,7 +70,7 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
     <div className="editing">
       <div className="textareas">
         <div className="textarea">
-          <div className="label">{args ? "Reasoning" : "Output"}</div>
+          <div className="label">{tools ? "Reasoning" : "Output"}</div>
           <textarea
             className={cx("input")}
             value={content}
@@ -82,21 +82,30 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
           />
         </div>
 
-        {args && (
-          <div className="textarea">
-            <div className="label">
-              {decodeFunctionName(generation.message.function_call.name)}
+        {tools &&
+          tools.map((toolCall) => (
+            <div className="textarea">
+              <div className="label">
+                {decodeFunctionName(toolCall.function.name)}
+              </div>
+              <textarea
+                className={cx("input")}
+                value={toolCall.function.arguments}
+                onChange={(event) => {
+                  setTools((tools: Tool[]) => {
+                    const newTools = produce(tools, (draft) => {
+                      draft.find(
+                        (tool) => tool.id === toolCall.id
+                      ).function.arguments = event.target.value;
+                    });
+
+                    return newTools;
+                  });
+                }}
+                ref={argsRef}
+              />
             </div>
-            <textarea
-              className={cx("input")}
-              value={args}
-              onChange={(event) => {
-                setArgs(event.target.value);
-              }}
-              ref={argsRef}
-            />
-          </div>
-        )}
+          ))}
       </div>
 
       <div className="actions">
@@ -132,11 +141,7 @@ const EditGeneration = ({ generation, setIsEditing, socketRef }) => {
 
             const updatedMessage = produce(generation.message, (draft) => {
               draft.content = content;
-
-              if (args) {
-                draft.function_call = draft.function_call || {};
-                draft.function_call.arguments = args;
-              }
+              draft.tool_calls = tools;
             });
 
             socketRef.current.send(
@@ -169,12 +174,8 @@ const Generation = ({
   const [isEditing, setIsEditing] = useState(false);
   const { message } = generation;
 
-  const Interface = getInterface(
-    message.function_call ? message.function_call.name : message.name,
-    message.function_call ? "Request" : "Response"
-  );
-
-  const isFunction = message.function_call || message.role === "function";
+  const isToolCall = message.tool_calls;
+  const isToolResponse = message.role === "tool";
 
   return (
     <div
@@ -199,36 +200,58 @@ const Generation = ({
         <EditGeneration {...{ generation, setIsEditing, socketRef }} />
       ) : (
         <div className="content">
-          {!isFunction && message.content}
+          {!isToolCall && !isToolResponse && message.content}
 
-          {isFunction && (
-            <div className="function">
-              <div className="status">
-                {message.function_call ? "Execute" : "Output"}
-              </div>
-              <div className="name">
-                {decodeFunctionName(
-                  message.function_call
-                    ? message.function_call.name
-                    : message.name
-                )}
-              </div>
-            </div>
-          )}
+          <div className="tools">
+            {isToolCall
+              ? message.tool_calls.map((toolCall) => {
+                  const Interface = getInterface(
+                    toolCall.function.name,
+                    "Request"
+                  );
 
-          {isFunction && (
-            <Suspense>
-              <ErrorBoundary>
-                <Interface
-                  props={JSON.parse(
-                    message.function_call
-                      ? message.function_call.arguments
-                      : message.content
-                  )}
-                />
-              </ErrorBoundary>
-            </Suspense>
-          )}
+                  return (
+                    <div key={toolCall.id} className="tool">
+                      <div className="label">
+                        <div className="status">Execute</div>
+                        <div className="name">
+                          {decodeFunctionName(toolCall.function.name)}
+                        </div>
+                      </div>
+
+                      <Suspense>
+                        <ErrorBoundary>
+                          <Interface
+                            props={JSON.parse(toolCall.function.arguments)}
+                          />
+                        </ErrorBoundary>
+                      </Suspense>
+                    </div>
+                  );
+                })
+              : isToolResponse
+              ? [""].map(() => {
+                  const Interface = getInterface(message.name, "Response");
+
+                  return (
+                    <div key={message.name} className="tool">
+                      <div className="label">
+                        <div className="status">Execute</div>
+                        <div className="name">
+                          {decodeFunctionName(message.name)}
+                        </div>
+                      </div>
+
+                      <Suspense>
+                        <ErrorBoundary>
+                          <Interface props={JSON.parse(message.content)} />
+                        </ErrorBoundary>
+                      </Suspense>
+                    </div>
+                  );
+                })
+              : null}
+          </div>
         </div>
       )}
     </div>
