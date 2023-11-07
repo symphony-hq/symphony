@@ -68,7 +68,7 @@ const machine = createMachine(
           color: "#d4d4d4",
           description:
             "You are a friendly assistant. Keep your responses short.",
-          modelId: "gpt-4",
+          modelId: "gpt-4-1106-preview",
         },
         {
           name: "user",
@@ -85,7 +85,7 @@ const machine = createMachine(
     on: {
       CLIENT_MESSAGE: [
         {
-          target: "gpt4",
+          target: "gpt",
           cond: (_, event) => event.data.role === "user",
           actions: [
             assign((context, event) => {
@@ -175,71 +175,80 @@ const machine = createMachine(
             new Promise((resolve) => {
               const { generations } = context;
 
-              const functionCall = pipe(
+              const toolCalls = pipe(
                 generations,
                 AR.last,
                 O.map(
-                  (generation: Generation) => generation.message.function_call
+                  (generation: Generation) => generation.message.tool_calls
                 ),
                 O.chain(O.fromNullable)
               );
 
-              if (O.isSome(functionCall)) {
-                const name = decodeFunctionName(functionCall.value.name);
-                const args = JSON.parse(functionCall.value.arguments);
+              if (O.isSome(toolCalls)) {
+                Promise.all(
+                  toolCalls.value.map(async (toolCall) => {
+                    const name = decodeFunctionName(toolCall.function.name);
+                    const args = JSON.parse(toolCall.function.arguments);
 
-                axios
-                  .post(
-                    `${
-                      name.includes(".ts")
-                        ? "http://localhost:3003"
-                        : name.includes(".py")
-                        ? `http://0.0.0.0:3004`
-                        : ""
-                    }/${getNameFromFunction(name)}`,
-                    args
-                  )
-                  .then((response) => {
-                    const { data } = response;
+                    return axios
+                      .post(
+                        `${
+                          name.includes(".ts")
+                            ? "http://localhost:3003"
+                            : name.includes(".py")
+                            ? `http://0.0.0.0:3004`
+                            : ""
+                        }/${getNameFromFunction(name)}`,
+                        args
+                      )
+                      .then((response) => {
+                        const { data } = response;
 
-                    const message = {
-                      role: "function",
-                      name: encodeFunctionName(name),
-                      content: JSON.stringify(data),
-                    };
+                        const message = {
+                          tool_call_id: toolCall.id,
+                          role: "tool",
+                          name: encodeFunctionName(name),
+                          content: JSON.stringify(data),
+                        };
 
-                    resolve(message);
+                        return message;
+                      })
+                      .catch((error) => {
+                        const message = {
+                          tool_call_id: toolCall.id,
+                          role: "tool",
+                          name: encodeFunctionName(name),
+                          content: JSON.stringify({
+                            errorMessage: error.message,
+                          }),
+                        };
+
+                        return message;
+                      });
                   })
-                  .catch((error) => {
-                    const message = {
-                      role: "function",
-                      name: encodeFunctionName(name),
-                      content: JSON.stringify({
-                        errorMessage: error.message,
-                      }),
-                    };
-
-                    resolve(message);
-                  });
+                ).then((messages) => {
+                  resolve(messages);
+                });
               } else {
                 resolve(null);
               }
             }).then((response) => response),
           onDone: [
             {
-              target: "gpt4",
+              target: "gpt",
               cond: (_, event) => event.data,
               actions: [
                 assign((context, event) => {
                   const { id, generations } = context;
-                  const { data: message } = event;
+                  const { data: messages } = event;
 
-                  context.generations = [
-                    ...generations,
-                    createGeneration(message, id),
-                  ];
+                  const newGenerations = messages.map((message) =>
+                    createGeneration(message, id)
+                  );
+
+                  context.generations = [...generations, ...newGenerations];
                 }),
-                "sendFunctionMessageToClients",
+                "sendToolMessagesToClients",
               ],
             },
             {
@@ -248,9 +257,9 @@ const machine = createMachine(
           ],
         },
       },
-      gpt4: {
+      gpt: {
         invoke: {
-          src: (context, event) => {
+          src: (context) => {
             const pythonFunctions = JSON.parse(
               fs.readFileSync(
                 "./symphony/server/python/descriptions.json",
@@ -283,14 +292,16 @@ const machine = createMachine(
                   ),
                 },
                 ...context.generations.map((generation) => generation.message),
-                event.data,
               ],
               model: pipe(
                 context.connections,
                 getAssistantFromConnections,
                 getModelIdFromAssistant
               ),
-              functions: [...typescriptFunctions, ...pythonFunctions],
+              tools: [...typescriptFunctions, ...pythonFunctions].map((fn) => ({
+                type: "function",
+                function: fn,
+              })),
             });
           },
           onDone: {
@@ -632,26 +643,31 @@ const machine = createMachine(
           );
         }
       },
-      sendFunctionMessageToClients: async (context) => {
+      sendToolMessagesToClients: async (context, event) => {
         const { generations } = context;
+        const { data: messages } = event;
 
-        const recentFunctionGeneration = pipe(
-          generations,
-          AR.findLast(
-            (generation: Generation) => generation.message.role === "function"
-          )
-        );
-
-        if (O.isSome(recentFunctionGeneration)) {
-          wss.clients.forEach((client: WebSocket) => {
-            client.send(JSON.stringify(recentFunctionGeneration.value));
-          });
-
-          await axios.post(
-            `${DATABASE_ENDPOINT}/generations`,
-            recentFunctionGeneration.value
+        messages.forEach(async (message: Message) => {
+          const toolGeneration = pipe(
+            generations,
+            AR.findFirst(
+              (generation: Generation) =>
+                generation.message.role === "tool" &&
+                generation.message.tool_call_id === message.tool_call_id
+            )
           );
-        }
+
+          if (O.isSome(toolGeneration)) {
+            wss.clients.forEach((client: WebSocket) => {
+              client.send(JSON.stringify(toolGeneration.value));
+            });
+
+            await axios.post(
+              `${DATABASE_ENDPOINT}/generations`,
+              toolGeneration.value
+            );
+          }
+        });
       },
       sendConversationToClients: (context) => {
         const { generations } = context;

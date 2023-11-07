@@ -5,11 +5,18 @@ export interface FunctionCall {
   arguments: string;
 }
 
+export interface Tool {
+  id: string;
+  type: string;
+  function: FunctionCall;
+}
+
 export interface Message {
   role: string;
   content: string;
-  name?: string;
-  function_call?: FunctionCall;
+  name: string;
+  tool_call_id?: string;
+  tool_calls?: Tool[];
 }
 
 export interface Generation {
