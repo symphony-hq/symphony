@@ -57,6 +57,13 @@ function getSchema(propertyType) {
   }
 }
 
+function hasConstArrowFunction(node: ts.Node) {
+  if (ts.isArrowFunction(node) && ts.isVariableDeclaration(node.parent)) {
+    return true;
+  }
+  return node.getChildren().some((child) => hasConstArrowFunction(child));
+}
+
 function extractParameters(node: ts.InterfaceDeclaration) {
   const parameters: Parameters = {
     type: "object",
@@ -119,7 +126,10 @@ function generateSchema(sourceFile: ts.SourceFile, fileName: string) {
       }
     }
 
-    if (ts.isFunctionDeclaration(node)) {
+    if (
+      ts.isFunctionDeclaration(node) ||
+      (ts.isVariableStatement(node) && hasConstArrowFunction(node))
+    ) {
       const jsDocComments = ts.getJSDocCommentsAndTags(node);
 
       for (const comment of jsDocComments) {
